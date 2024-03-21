@@ -13,7 +13,7 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "docs/Was ist ein Compiler?.md",
+                "file": "docs/Aufbau eines Compilers.md",
                 "mode": "source",
                 "source": false
               }
@@ -85,7 +85,7 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "docs/Was ist ein Compiler?.md",
+                "file": "docs/Aufbau eines Compilers.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -102,7 +102,7 @@
             "state": {
               "type": "outgoing-link",
               "state": {
-                "file": "docs/Was ist ein Compiler?.md",
+                "file": "docs/Aufbau eines Compilers.md",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               }
@@ -125,7 +125,7 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "docs/Was ist ein Compiler?.md"
+                "file": "docs/Aufbau eines Compilers.md"
               }
             }
           }
@@ -146,15 +146,15 @@
       "command-palette:Open command palette": false
     }
   },
-  "active": "6057bb325b0d2aa9",
+  "active": "e1ac80851df86fc0",
   "lastOpenFiles": [
+    "docs/Was ist ein Compiler?.md",
+    "docs/Aufbau eines Compilers.md",
     "README.md",
     "docs/Compiler.md",
-    "docs/Aufbau eines Compilers.md",
     "docs/Interpreter.md",
     "docs/Parser.md",
     "docs/Lexer.md",
-    "docs/Was ist ein Compiler?.md",
     "target/debug/incremental/compiler-27wcaen59ta24/s-guibgexrmg-aza1u6-5q1yw688e85z0az4xe7mnqzpf/work-products.bin",
     "target/debug/incremental/compiler-27wcaen59ta24/s-guibgexrmg-aza1u6-5q1yw688e85z0az4xe7mnqzpf/query-cache.bin",
     "target/debug/incremental/compiler-27wcaen59ta24/s-guibgexrmg-aza1u6-5q1yw688e85z0az4xe7mnqzpf/dep-graph.bin",
