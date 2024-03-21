@@ -1,0 +1,169 @@
+{
+  "main": {
+    "id": "3539c9b963c9ba5a",
+    "type": "split",
+    "children": [
+      {
+        "id": "dde22fc4071f031f",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "e1ac80851df86fc0",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "docs/Was ist ein Compiler?.md",
+                "mode": "source",
+                "source": false
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "04b3f882931c03c9",
+    "type": "split",
+    "children": [
+      {
+        "id": "65a7e6df119a7b78",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "6057bb325b0d2aa9",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical"
+              }
+            }
+          },
+          {
+            "id": "e4b6ca64dd29cfe3",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              }
+            }
+          },
+          {
+            "id": "b17b561fe7c3883d",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {}
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300
+  },
+  "right": {
+    "id": "a0ba36b486a51bf2",
+    "type": "split",
+    "children": [
+      {
+        "id": "ba633a25a6552311",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "1513d6b4f828a3c0",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "file": "docs/Was ist ein Compiler?.md",
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              }
+            }
+          },
+          {
+            "id": "b6d1801fa513cba8",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "file": "docs/Was ist ein Compiler?.md",
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              }
+            }
+          },
+          {
+            "id": "389611b2b6bea7cb",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true
+              }
+            }
+          },
+          {
+            "id": "ad7393de93bdefa8",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "file": "docs/Was ist ein Compiler?.md"
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300,
+    "collapsed": true
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "switcher:Open quick switcher": false,
+      "graph:Open graph view": false,
+      "canvas:Create new canvas": false,
+      "daily-notes:Open today's daily note": false,
+      "templates:Insert template": false,
+      "command-palette:Open command palette": false
+    }
+  },
+  "active": "6057bb325b0d2aa9",
+  "lastOpenFiles": [
+    "README.md",
+    "docs/Compiler.md",
+    "docs/Aufbau eines Compilers.md",
+    "docs/Interpreter.md",
+    "docs/Parser.md",
+    "docs/Lexer.md",
+    "docs/Was ist ein Compiler?.md",
+    "target/debug/incremental/compiler-27wcaen59ta24/s-guibgexrmg-aza1u6-5q1yw688e85z0az4xe7mnqzpf/work-products.bin",
+    "target/debug/incremental/compiler-27wcaen59ta24/s-guibgexrmg-aza1u6-5q1yw688e85z0az4xe7mnqzpf/query-cache.bin",
+    "target/debug/incremental/compiler-27wcaen59ta24/s-guibgexrmg-aza1u6-5q1yw688e85z0az4xe7mnqzpf/dep-graph.bin",
+    "target/debug/incremental/compiler-27wcaen59ta24/s-guibgexrmg-aza1u6-5q1yw688e85z0az4xe7mnqzpf",
+    "target/debug/incremental/compiler-3eamcaksaxhau/s-guibgexrki-g8wzug-60pyiuegyd30863sfk6fjtbi1/work-products.bin",
+    "target/debug/incremental/compiler-3eamcaksaxhau/s-guibgexrki-g8wzug-60pyiuegyd30863sfk6fjtbi1/query-cache.bin",
+    "target/debug/incremental/compiler-3eamcaksaxhau/s-guibgexrki-g8wzug-60pyiuegyd30863sfk6fjtbi1/dep-graph.bin",
+    "target/debug/incremental/compiler-3eamcaksaxhau/s-guibgexrki-g8wzug-60pyiuegyd30863sfk6fjtbi1",
+    "target/debug/incremental/compiler-27wcaen59ta24/s-guibgexrmg-aza1u6.lock",
+    "target/debug/incremental/compiler-3eamcaksaxhau/s-guibgexrki-g8wzug-working/work-products.bin"
+  ]
+}
