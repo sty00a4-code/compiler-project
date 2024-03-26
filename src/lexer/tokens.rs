@@ -46,7 +46,7 @@ pub enum Token {
     For,
 }
 impl Token {
-    pub fn ident(ident: String) -> Self {
+    fn ident(ident: String) -> Self {
         match ident.as_str() {
             "let" => Self::Let,
             "def" => Self::Def,

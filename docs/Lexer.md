@@ -162,7 +162,7 @@ let Some(c) = lexer.next() else {
 };
 ...
 ```
-Als erstes ist es wichtig alle Leerzeichen zu überspringen, damit diese beliebig zwischen jedem Token stehen können. Dafür ist die `while let` Schleife da. Danach merkt sicher der Lexer die Position un den ersten Buchstaben des nächsten Tokens.
+Als erstes ist es wichtig alle Leerzeichen (dazu zählen auch Zeilenumbrüche) zu überspringen, damit diese beliebig zwischen jedem Token stehen können. Dafür ist die `while let` Schleife da. Danach merkt sicher der Lexer die Position un den ersten Buchstaben des nächsten Tokens.
 
 ```rust
 match c {
@@ -218,6 +218,7 @@ match c {
 }
 ```
 Als erstes wird geschaut ob der Buchstabe ein bestimmtes Zeichen ist was in für die Sprache von Bedeutung ist wie `=` oder `+` usw. Falls das der Fall ist geben wir einfach das Symbol wider und machen nichts weiter.
+Wie man sehen kann benutze ich dafür den `match` Zweig, der in Rust ein sogenanntes Pattern-Matching (Mustervergleichen) benutzt um die Art des Buchstabens zu ermitteln.
 
 ```rust
 match c {
@@ -238,7 +239,7 @@ match c {
 	...
 }
 ```
-Ein spezielles Symbol für die Sprache sind die Anführungszeichen, denn diese umgeben immer einen String. Das heißt wenn der Lexer einen begegnet, sammelt er alle Buchstaben bis er das nächste Anführungszeichen hat, und dann gibt er diesen String in einem Token wider.
+Ein spezielles Symbol für die Sprache ist das Anführungszeichen, denn zwei von diesen umgeben immer einen String. Das heißt wenn der Lexer eines begegnet, sammelt er alle Buchstaben bis er das nächste Anführungszeichen hat, und dann gibt er diesen String in einem Token wider.
 
 ```rust
 match c {
@@ -273,7 +274,7 @@ match c {
 	...
 }
 ```
-Zahlen werden auf diese Weise gefunden. Wenn der Buchstabe eine ASCII Zahl ist werden alle darauf folgende Nummern erst in einem String gesammelt und dann in einen Dezimalzahl umgewandelt. Falls der Lexer einem Punkt begegnet nimmt er diesen mit auf und sammelt noch alle Nummern die danach kommen auf.
+Zahlen werden auf diese Weise gefunden. Wenn der Buchstabe eine ASCII Nummer ist werden alle darauf folgenden ASCII Nummern erst in einem String gesammelt, der dann am Ende in eine Dezimalzahl umgewandelt wird. Falls der Lexer einem Punkt begegnet nimmt er diesen mit und sammelt noch alle Nummern die danach kommen auf.
 
 ```rust
 match c {
@@ -291,7 +292,24 @@ match c {
 	...
 }
 ```
-Identifier werden auf die gleiche Art wie Zahlen aufgenommen, nur kann es hier keinen Punkt geben. Teil eines Identifiers sind alle Alphabetischen Buchstaben, Nummern sowie eine Unterstrich.
+Identifier werden auf die gleiche Art wie Zahlen aufgenommen, nur kann es hier keinen Punkt geben, was es noch einfacherer macht. Teile eines Identifiers sind alle Alpha-nummerische Buchstaben sowie Unterstriche.
+```rust
+impl Token {
+	...
+	fn ident(ident: String) -> Self {
+		match ident.as_str() {
+			"let" => Self::Let,
+			"def" => Self::Def,
+			"if" => Self::If,
+			"else" => Self::Else,
+			"while" => Self::While,
+			"for" => Self::For,
+			_ => Self::Ident(ident),
+		}
+	}
+	...
+}
+```
 
 ```rust
 match c {
@@ -299,4 +317,4 @@ match c {
 	c => Err(Located::new(LexError::BadCharacter(c), pos)),
 }
 ```
-Wenn keiner der vorherigen Muster gepasst haben, gibt der Lexer einen Fehler wider, der besagt, dass ein nicht erkennbarer Buchstabe in dem Input ist, und schließt somit das Programm.
+Wenn keiner der vorherigen Muster gepasst hat, gibt der Lexer einen Fehler wider, der besagt, dass ein nicht erkennbarer Buchstabe in dem Input ist, und schließt somit das Programm.
