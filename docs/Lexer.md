@@ -1,5 +1,5 @@
 Der Lexer führt eine lexikalische Analyse des Input-Texts durch, wobei er Buchstaben in Symbolen, Schlüsselwörtern, oder Zahlen zusammenfasst. Diese nennt man Token (Englisch für "Zeichen" oder "Symbol"). Diese helfen uns später um eine bessere syntaktische Analyse mit dem Parser zu vollführen.
-
+# Tokens
 Um Tokens repräsentieren zu können benutze ich in Rust ein sogenanntes `enum`. Dieser Typ von Datenstruktur erlaubt es einem seinen eigenen Datentypen zu erstellen, der beliebig viele Varianten haben kann.
 ```rust
 pub enum Token {
@@ -83,3 +83,220 @@ struct Located<Token> {
 	pos: Position
 }
 ```
+# Lexer
+Der Lexer wird nun wie folgt implementiert:
+
+```rust
+struct Lexer<'a> {
+	chars: Peekable<Chars<'a>>, // Iterator über einen Text
+	ln: usize, // Zeilennummer
+	col: usize, // Spaltennummer
+}
+```
+Die Struktur Lexer besteht aus dem Feld `chars`, welche ein Iterator über `char` ist, und einer Zeilennummer (`ln`) und einer Spaltennummer (`col`). Das sind alle Daten, die man benötigen um erfolgreich Tokens zu generieren.
+
+```rust
+impl<'a> Iterator for Lexer<'a> {
+	type Item = char;
+	fn next(&mut self) -> Option<Self::Item> {
+		let c = self.chars.next()?; // nächster Buchstabe
+		if c == '\n' { // neue Zeile
+			self.ln += 1;
+			self.col = 0;
+		} else {
+			self.col += 1;
+		}
+		Some(c) // gibt den Buchtstaben wider
+	}
+}
+```
+Um noch mehr Funktionalitäten für den Lexer zu implementieren, benutzen wir den `Iterator` Trait in Rust. Dieser benötigt nur eine Funktion `next` und den Typen des Widergabewertes `Item` was in unserem Fall `char` ist. Rust erstellt dann automatisch noch mehr Funktionen für den Lexer, da diese nur die `next` benötigen.
+
+```rust
+trait Lexable: Sized {
+	type Error;
+	
+	fn lex_next<'a>(lexer: &mut Lexer<'a>) -> Result<Option<Located<Self>>, Located<Self::Error>>;
+	
+	fn lex(text: &str) -> Result<Vec<Located<Self>>, Located<Self::Error>> {
+		let mut lexer = Lexer {
+			chars: text.chars().peekable(),
+			ln: 0,
+			col: 0
+		};
+		let mut tokens = vec![];
+		while let Some(token) = Self::lex_next(&mut lexer)? {
+			tokens.push(token)
+		}
+		Ok(tokens)
+	}
+}
+```
+Hier definiere ich einen eigenen Trait namens `Lexable`. Das einzige was hier wichtig ist zu verstehen ist, dass dieser Trait den Implementierer zwingt die `lex_next` Funktion und den `Error` Typen zu definieren.
+```rust
+enum LexError {
+	BadCharacter(char),
+	ParseNumberError(ParseFloatError),
+	UnclosedString,
+}
+impl Lexable for Token {
+	type Error = LexError;
+	fn lex_next<'a>(lexer: &mut Lexer<'a>) -> Result<Option<Located<Self>>, Located<Self::Error>> {
+		...
+	}
+}
+```
+Genau das mache ich hier für `Token`. `LexError` ist ein `enum` um alle Fehler die entstehen können beim Lexen darzustellen.
+
+Schritte des Lexens:
+```rust
+while let Some(c) = lexer.peek() {
+	if !c.is_ascii_whitespace() {
+		break;
+	}
+	lexer.next();
+}
+let pos = lexer.pos();
+let Some(c) = lexer.next() else {
+	return Ok(None);
+};
+...
+```
+Als erstes ist es wichtig alle Leerzeichen zu überspringen, damit diese beliebig zwischen jedem Token stehen können. Dafür ist die `while let` Schleife da. Danach merkt sicher der Lexer die Position un den ersten Buchstaben des nächsten Tokens.
+
+```rust
+match c {
+	'=' => {
+		if lexer.peek() == Some(&'=') {
+			lexer.next();
+			Ok(Some(Located::new(Token::EqualEqual, pos)))
+		} else {
+			Ok(Some(Located::new(Token::Equal, pos)))
+		}
+	}
+	',' => Ok(Some(Located::new(Token::Comma, pos))),
+	'.' => Ok(Some(Located::new(Token::Dot, pos))),
+	'(' => Ok(Some(Located::new(Token::ParanLeft, pos))),
+	')' => Ok(Some(Located::new(Token::ParanRight, pos))),
+	'[' => Ok(Some(Located::new(Token::BracketLeft, pos))),
+	']' => Ok(Some(Located::new(Token::BracketRight, pos))),
+	'{' => Ok(Some(Located::new(Token::BraceLeft, pos))),
+	'}' => Ok(Some(Located::new(Token::BraceRight, pos))),
+	'+' => Ok(Some(Located::new(Token::Plus, pos))),
+	'-' => Ok(Some(Located::new(Token::Minus, pos))),
+	'*' => Ok(Some(Located::new(Token::Star, pos))),
+	'/' => Ok(Some(Located::new(Token::Slash, pos))),
+	'%' => Ok(Some(Located::new(Token::Percent, pos))),
+	'^' => Ok(Some(Located::new(Token::Exponent, pos))),
+	'<' => {
+		if lexer.peek() == Some(&'=') {
+			lexer.next();
+			Ok(Some(Located::new(Token::LessEqual, pos)))
+		} else {
+			Ok(Some(Located::new(Token::Less, pos)))
+		}
+	}
+	'>' => {
+		if lexer.peek() == Some(&'=') {
+			lexer.next();
+			Ok(Some(Located::new(Token::GreaterEqual, pos)))
+		} else {
+			Ok(Some(Located::new(Token::Greater, pos)))
+		}
+	}
+	'&' => Ok(Some(Located::new(Token::Ampersand, pos))),
+	'|' => Ok(Some(Located::new(Token::Pipe, pos))),
+	'!' => {
+		if lexer.peek() == Some(&'=') {
+			lexer.next();
+			Ok(Some(Located::new(Token::ExclamationEqual, pos)))
+		} else {
+			Ok(Some(Located::new(Token::Exclamation, pos)))
+		}
+	}
+	...
+}
+```
+Als erstes wird geschaut ob der Buchstabe ein bestimmtes Zeichen ist was in für die Sprache von Bedeutung ist wie `=` oder `+` usw. Falls das der Fall ist geben wir einfach das Symbol wider und machen nichts weiter.
+
+```rust
+match c {
+	...
+	'"' => {
+		let mut string = String::new();
+		while let Some(c) = lexer.peek() {
+			if *c == '"' {
+				break;
+			}
+			string.push(lexer.next().unwrap())
+		}
+		if lexer.next() != Some('"') {
+			return Err(Located::new(LexError::UnclosedString, pos))
+		}
+		Ok(Some(Located::new(Token::String(string), pos)))
+	}
+	...
+}
+```
+Ein spezielles Symbol für die Sprache sind die Anführungszeichen, denn diese umgeben immer einen String. Das heißt wenn der Lexer einen begegnet, sammelt er alle Buchstaben bis er das nächste Anführungszeichen hat, und dann gibt er diesen String in einem Token wider.
+
+```rust
+match c {
+	...
+	c if c.is_ascii_digit() => {
+		let mut number = String::from(c);
+		while let Some(c) = lexer.peek() {
+			if !c.is_ascii_digit() {
+				break;
+			}
+			number.push(lexer.next().unwrap())
+		}
+		if lexer.peek() == Some(&'.') {
+			number.push(lexer.next().unwrap());
+			while let Some(c) = lexer.peek() {
+				if !c.is_ascii_digit() {
+					break;
+				}
+				number.push(lexer.next().unwrap())
+			}
+		}
+		Ok(Some(Located::new(
+			Token::Number(
+				number
+					.parse()
+					.map_err(LexError::ParseNumberError)
+					.map_err(|err| Located::new(err, pos.clone()))?,
+			),
+			pos,
+		)))
+	}
+	...
+}
+```
+Zahlen werden auf diese Weise gefunden. Wenn der Buchstabe eine ASCII Zahl ist werden alle darauf folgende Nummern erst in einem String gesammelt und dann in einen Dezimalzahl umgewandelt. Falls der Lexer einem Punkt begegnet nimmt er diesen mit auf und sammelt noch alle Nummern die danach kommen auf.
+
+```rust
+match c {
+	...
+	c if c.is_alphanumeric() || c == '_' => {
+		let mut ident = String::from(c);
+		while let Some(c) = lexer.peek() {
+			if !c.is_alphanumeric() && *c != '_' {
+				break;
+			}
+			ident.push(lexer.next().unwrap())
+		}
+		Ok(Some(Located::new(Token::ident(ident), pos)))
+	}
+	...
+}
+```
+Identifier werden auf die gleiche Art wie Zahlen aufgenommen, nur kann es hier keinen Punkt geben. Teil eines Identifiers sind alle Alphabetischen Buchstaben, Nummern sowie eine Unterstrich.
+
+```rust
+match c {
+	...
+	c => Err(Located::new(LexError::BadCharacter(c), pos)),
+}
+```
+Wenn keiner der vorherigen Muster gepasst haben, gibt der Lexer einen Fehler wider, der besagt, dass ein nicht erkennbarer Buchstabe in dem Input ist, und schließt somit das Programm.

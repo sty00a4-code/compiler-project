@@ -13,7 +13,7 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "docs/Parser.md",
+                "file": "docs/Lexer.md",
                 "mode": "source",
                 "source": false
               }
@@ -85,7 +85,7 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "docs/Parser.md",
+                "file": "docs/Lexer.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -102,7 +102,7 @@
             "state": {
               "type": "outgoing-link",
               "state": {
-                "file": "docs/Parser.md",
+                "file": "docs/Lexer.md",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               }
@@ -125,7 +125,7 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "docs/Parser.md"
+                "file": "docs/Lexer.md"
               }
             }
           }
@@ -146,24 +146,25 @@
       "command-palette:Open command palette": false
     }
   },
-  "active": "6057bb325b0d2aa9",
+  "active": "e1ac80851df86fc0",
   "lastOpenFiles": [
+    "target/debug/incremental/compiler-x5rxfik2dq7o/s-guo1vwazc1-l40k40-5p2wjr7gdykzgg2yyhxoyc7om/work-products.bin",
+    "target/debug/incremental/compiler-x5rxfik2dq7o/s-guo1vwazc1-l40k40-5p2wjr7gdykzgg2yyhxoyc7om/query-cache.bin",
+    "target/debug/incremental/compiler-x5rxfik2dq7o/s-guo1vwazc1-l40k40-5p2wjr7gdykzgg2yyhxoyc7om/dep-graph.bin",
+    "target/debug/incremental/compiler-x5rxfik2dq7o/s-guo1vwazc1-l40k40-5p2wjr7gdykzgg2yyhxoyc7om",
+    "target/debug/incremental/compiler-2hh6odgpsut22/s-guo1vwazc2-12avldy-6zfd7yztgqfdj1rjkn8pigdfk/work-products.bin",
+    "target/debug/incremental/compiler-2hh6odgpsut22/s-guo1vwazc2-12avldy-6zfd7yztgqfdj1rjkn8pigdfk/query-cache.bin",
+    "target/debug/incremental/compiler-2hh6odgpsut22/s-guo1vwazc2-12avldy-6zfd7yztgqfdj1rjkn8pigdfk/dep-graph.bin",
+    "target/debug/incremental/compiler-2hh6odgpsut22/s-guo1vwazc2-12avldy-6zfd7yztgqfdj1rjkn8pigdfk",
+    "target/debug/incremental/compiler-x5rxfik2dq7o/s-guo1vwazc1-l40k40-working/work-products.bin",
+    "target/debug/incremental/compiler-x5rxfik2dq7o/s-guo1vwazc1-l40k40-working/query-cache.bin",
+    "target/debug/incremental/compiler-x5rxfik2dq7o/s-guo1vwazc1-l40k40-working/dep-graph.part.bin",
+    "docs/Parser.md",
     "docs/Lexer.md",
-    "target/debug/compiler.d",
-    "target/debug/compiler",
-    "target/debug/deps/compiler-dd8eacd16667e491",
-    "target/debug/incremental/compiler-36u4hpmqepp28/s-gujaiubz0s-tdokbq-1eebkjj82mv1nu7t621rx1vhn/work-products.bin",
-    "target/debug/incremental/compiler-36u4hpmqepp28/s-gujaiubz0s-tdokbq-1eebkjj82mv1nu7t621rx1vhn/query-cache.bin",
-    "target/debug/incremental/compiler-36u4hpmqepp28/s-gujaiubz0s-tdokbq-1eebkjj82mv1nu7t621rx1vhn/dep-graph.bin",
-    "target/debug/incremental/compiler-36u4hpmqepp28/s-gujaiubz0s-tdokbq-1eebkjj82mv1nu7t621rx1vhn/51aay109qf138lhp.o",
-    "target/debug/incremental/compiler-36u4hpmqepp28/s-gujaiubz0s-tdokbq-1eebkjj82mv1nu7t621rx1vhn/41lqonbmqcce61bv.o",
-    "target/debug/incremental/compiler-36u4hpmqepp28/s-gujaiubz0s-tdokbq-1eebkjj82mv1nu7t621rx1vhn/35dbcbbomdwwy0nf.o",
-    "target/debug/incremental/compiler-36u4hpmqepp28/s-gujaiubz0s-tdokbq-1eebkjj82mv1nu7t621rx1vhn/2t16yl2drvgtm95x.o",
     "docs/Aufbau eines Compilers.md",
     "docs/Was ist ein Compiler?.md",
     "README.md",
     "docs/Compiler.md",
-    "docs/Interpreter.md",
-    "docs/Parser.md"
+    "docs/Interpreter.md"
   ]
 }
