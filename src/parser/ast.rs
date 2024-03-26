@@ -39,7 +39,7 @@ pub enum Statement {
         cond: Located<Expression>,
         body: Located<Block>,
     },
-    
+
     Return(Located<Expression>),
 }
 #[derive(Debug, Clone, PartialEq)]
@@ -166,11 +166,61 @@ impl Parsable for Statement {
                 let expr = Expression::parse(parser)?;
                 Ok(Located::new(Self::Let { ident, expr }, pos))
             }
+            Token::Def => {
+                let Located { value: _, pos } = expected!(parser);
+                let ident = Atom::ident(parser)?;
+                expected!(parser: ParanLeft);
+                let mut params = vec![];
+                while let Some(Located {
+                    value: token,
+                    pos: _,
+                }) = parser.peek()
+                {
+                    if token == &Token::ParanRight {
+                        break;
+                    }
+                    params.push(Atom::ident(parser)?);
+                    if let Some(Located {
+                        value: Token::ParanRight,
+                        pos: _,
+                    }) = parser.peek() {
+                        break;
+                    }
+                    expected!(parser: Comma);
+                }
+                expected!(parser: ParanRight);
+                let body = Block::parse(parser)?;
+                Ok(Located::new(Self::Def { ident, params, body }, pos))
+            }
             Token::Return => {
                 let Located { value: _, pos } = expected!(parser);
                 let expr = Expression::parse(parser)?;
                 Ok(Located::new(Self::Return(expr), pos))
             }
+            Token::If => {
+                let Located { value: _, pos } = expected!(parser);
+                let cond = Expression::parse(parser)?;
+                let case = Block::parse(parser)?;
+                let mut else_case = None;
+                if let Some(Located { value: Token::Else, pos: _ }) = parser.peek() {
+                    parser.next();
+                    else_case = Some(if let Some(Located { value: Token::If, pos: _ }) = parser.peek() {
+                        let stat = Statement::parse(parser)?;
+                        let pos = stat.pos.clone();
+                        Located::new(Block(vec![stat]), pos)
+                    } else {
+                        Block::parse(parser)?
+                    });
+                }
+                Ok(Located::new(Self::If { cond, case, else_case }, pos))
+            }
+            Token::While => {
+                let Located { value: _, pos } = expected!(parser);
+                let cond = Expression::parse(parser)?;
+                let body = Block::parse(parser)?;
+                Ok(Located::new(Self::While { cond, body }, pos))
+            }
+            
             Token::Ident(_) => {
                 let ident = Atom::ident(parser)?;
                 let Located { value: token, pos } = expected!(parser);
@@ -190,11 +240,18 @@ impl Parsable for Statement {
                                 break;
                             }
                             args.push(Expression::parse(parser)?);
+                            if let Some(Located {
+                                value: Token::ParanRight,
+                                pos: _,
+                            }) = parser.peek() {
+                                break;
+                            }
+                            expected!(parser: Comma);
                         }
                         expected!(parser: ParanRight);
                         Ok(Located::new(Self::Call { ident, args }, pos))
                     }
-                    token => Err(Located::new(ParseError::UnexpectedToken(token), pos))
+                    token => Err(Located::new(ParseError::UnexpectedToken(token), pos)),
                 }
             }
             _ => Err(Located::new(
@@ -207,15 +264,115 @@ impl Parsable for Statement {
 impl Parsable for Expression {
     type Error = ParseError;
     fn parse(parser: &mut Parser) -> Result<Located<Self>, Located<Self::Error>> {
-        Self::call(parser)
+        Self::binary(parser, 0)
+    }
+}
+impl BinaryOperator {
+    pub const LAYER: &'static [&'static [Self]] = &[
+        &[Self::Ampersand, Self::Pipe],
+        &[
+            Self::EqualEqual,
+            Self::ExclamationEqual,
+            Self::Less,
+            Self::Greater,
+            Self::LessEqual,
+            Self::GreaterEqual,
+        ],
+        &[Self::Plus, Self::Minus],
+        &[Self::Star, Self::Slash, Self::Percent],
+        &[Self::Exponent],
+    ];
+    pub fn layer(layer: usize) -> Option<&'static [Self]> {
+        Self::LAYER.get(layer).copied()
+    }
+    pub fn token(token: &Token) -> Option<Self> {
+        match token {
+            Token::Plus => Some(Self::Plus),
+            Token::Minus => Some(Self::Minus),
+            Token::Star => Some(Self::Star),
+            Token::Slash => Some(Self::Slash),
+            Token::Percent => Some(Self::Percent),
+            Token::Exponent => Some(Self::Exponent),
+            Token::EqualEqual => Some(Self::EqualEqual),
+            Token::ExclamationEqual => Some(Self::ExclamationEqual),
+            Token::Less => Some(Self::Less),
+            Token::Greater => Some(Self::Greater),
+            Token::LessEqual => Some(Self::LessEqual),
+            Token::GreaterEqual => Some(Self::GreaterEqual),
+            Token::Ampersand => Some(Self::Ampersand),
+            Token::Pipe => Some(Self::Pipe),
+            _ => None,
+        }
+    }
+}
+impl UnaryOperator {
+    pub const LAYER: &'static [&'static [Self]] = &[&[Self::Exclamation], &[Self::Minus]];
+    pub fn layer(layer: usize) -> Option<&'static [Self]> {
+        Self::LAYER.get(layer).copied()
+    }
+    pub fn token(token: &Token) -> Option<Self> {
+        match token {
+            Token::Minus => Some(Self::Minus),
+            Token::Exclamation => Some(Self::Exclamation),
+            _ => None,
+        }
     }
 }
 impl Expression {
     pub fn binary(parser: &mut Parser, layer: usize) -> Result<Located<Self>, Located<ParseError>> {
-        todo!()
+        let Some(ops) = BinaryOperator::layer(layer) else {
+            return Self::unary(parser, 0);
+        };
+        let mut left = Self::binary(parser, layer + 1)?;
+        while let Some(Located {
+            value: token,
+            pos: _,
+        }) = parser.peek()
+        {
+            let Some(op) = BinaryOperator::token(token) else {
+                break;
+            };
+            if !ops.contains(&op) {
+                break;
+            }
+            parser.next();
+            let pos = left.pos.clone();
+            let right = Self::binary(parser, layer + 1)?;
+            left = Located::new(
+                Self::Binary {
+                    op,
+                    left: Box::new(left),
+                    right: Box::new(right),
+                },
+                pos,
+            )
+        }
+        Ok(left)
     }
     pub fn unary(parser: &mut Parser, layer: usize) -> Result<Located<Self>, Located<ParseError>> {
-        todo!()
+        let Some(ops) = UnaryOperator::layer(layer) else {
+            return Self::call(parser);
+        };
+        if let Some(Located {
+            value: token,
+            pos: _,
+        }) = parser.peek()
+        {
+            if let Some(op) = UnaryOperator::token(token) {
+                if ops.contains(&op) {
+                    let Located { value: _, pos } = expected!(parser);
+                    let right = Self::unary(parser, layer)?;
+                    return Ok(Located::new(
+                        Self::Unary {
+                            op,
+                            right: Box::new(right),
+                        },
+                        pos,
+                    ));
+                }
+            }
+        }
+        Self::unary(parser, layer + 1)
     }
     pub fn call(parser: &mut Parser) -> Result<Located<Self>, Located<ParseError>> {
         let mut head = Atom::parse(parser)?.map(Self::Atom);
@@ -238,6 +395,13 @@ impl Expression {
                             break;
                         }
                         args.push(Expression::parse(parser)?);
+                        if let Some(Located {
+                            value: Token::ParanRight,
+                            pos: _,
+                        }) = parser.peek() {
+                            break;
+                        }
+                        expected!(parser: Comma);
                     }
                     expected!(parser: ParanRight);
                     head = Located::new(

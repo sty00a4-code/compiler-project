@@ -44,7 +44,6 @@ pub enum Token {
     If,
     Else,
     While,
-    For,
 }
 impl Token {
     fn ident(ident: String) -> Self {
@@ -55,7 +54,6 @@ impl Token {
             "if" => Self::If,
             "else" => Self::Else,
             "while" => Self::While,
-            "for" => Self::For,
             _ => Self::Ident(ident),
         }
     }
@@ -104,7 +102,6 @@ impl Display for Token {
             Self::If => write!(f, "if"),
             Self::Else => write!(f, "else"),
             Self::While => write!(f, "while"),
-            Self::For => write!(f, "for"),
         }
     }
 }
