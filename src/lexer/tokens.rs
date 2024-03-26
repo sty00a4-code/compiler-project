@@ -40,6 +40,7 @@ pub enum Token {
     // key words
     Let,
     Def,
+    Return,
     If,
     Else,
     While,
@@ -50,6 +51,7 @@ impl Token {
         match ident.as_str() {
             "let" => Self::Let,
             "def" => Self::Def,
+            "return" => Self::Return,
             "if" => Self::If,
             "else" => Self::Else,
             "while" => Self::While,
@@ -98,6 +100,7 @@ impl Display for Token {
             Self::Exclamation => write!(f, "!"),
             Self::Let => write!(f, "let"),
             Self::Def => write!(f, "def"),
+            Self::Return => write!(f, "return"),
             Self::If => write!(f, "if"),
             Self::Else => write!(f, "else"),
             Self::While => write!(f, "while"),

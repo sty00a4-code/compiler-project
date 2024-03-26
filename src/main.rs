@@ -1,4 +1,4 @@
-use crate::lexer::lex;
+use crate::{lexer::lex, parser::parse};
 use lexer::position::Located;
 use std::{env, fs, process::exit};
 
@@ -22,7 +22,13 @@ fn main() {
                 exit(1);
             })
             .unwrap();
-        dbg!(tokens);
+        let chunk = parse(tokens)
+            .map_err(|Located { value: err, pos }| {
+                eprintln!("ERROR {path}:{}:{}: {err}", pos.ln + 1, pos.col + 1);
+                exit(1);
+            })
+            .unwrap();
+        dbg!(chunk);
     } else {
         eprintln!("ERROR: no input file path provided");
         exit(1);
