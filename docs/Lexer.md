@@ -63,7 +63,7 @@ pub enum Token {
 }
 ```
 Zum Schluss habe ich noch ein paar Schlüsselwörter definiert.
-
+## Position
 Eine Sache auf die ich nicht eingegangen bin war, dass ich einen Datentyp für Lokalisierung von Tokens geschrieben habe, weil es jetzt nicht so wichtig war. Dennoch hier eine kurze Erklärung was diese genau machen, da ich sie später dauernd benutzen werde.
 ```rust
 struct Position {
@@ -85,7 +85,6 @@ struct Located<Token> {
 ```
 # Lexer
 Der Lexer wird nun wie folgt implementiert:
-
 ```rust
 struct Lexer<'a> {
 	chars: Peekable<Chars<'a>>, // Iterator über einen Text
@@ -94,7 +93,6 @@ struct Lexer<'a> {
 }
 ```
 Die Struktur Lexer besteht aus dem Feld `chars`, welche ein Iterator über `char` ist, und einer Zeilennummer (`ln`) und einer Spaltennummer (`col`). Das sind alle Daten, die man benötigen um erfolgreich Tokens zu generieren.
-
 ```rust
 impl<'a> Iterator for Lexer<'a> {
 	type Item = char;
@@ -111,7 +109,6 @@ impl<'a> Iterator for Lexer<'a> {
 }
 ```
 Um noch mehr Funktionalitäten für den Lexer zu implementieren, benutzen wir den `Iterator` Trait in Rust. Dieser benötigt nur eine Funktion `next` und den Typen des Widergabewertes `Item` was in unserem Fall `char` ist. Rust erstellt dann automatisch noch mehr Funktionen für den Lexer, da diese nur die `next` benötigen.
-
 ```rust
 trait Lexable: Sized {
 	type Error;
@@ -147,8 +144,8 @@ impl Lexable for Token {
 }
 ```
 Genau das mache ich hier für `Token`. `LexError` ist ein `enum` um alle Fehler die entstehen können beim Lexen darzustellen.
-
-Schritte des Lexens:
+## Schritte des Lexers
+### Leerzeichen
 ```rust
 while let Some(c) = lexer.peek() {
 	if !c.is_ascii_whitespace() {
@@ -163,7 +160,7 @@ let Some(c) = lexer.next() else {
 ...
 ```
 Als erstes ist es wichtig alle Leerzeichen (dazu zählen auch Zeilenumbrüche) zu überspringen, damit diese beliebig zwischen jedem Token stehen können. Dafür ist die `while let` Schleife da. Danach merkt sicher der Lexer die Position un den ersten Buchstaben des nächsten Tokens.
-
+### Symbole
 ```rust
 match c {
 	'=' => {
@@ -219,7 +216,7 @@ match c {
 ```
 Als erstes wird geschaut ob der Buchstabe ein bestimmtes Zeichen ist was in für die Sprache von Bedeutung ist wie `=` oder `+` usw. Falls das der Fall ist geben wir einfach das Symbol wider und machen nichts weiter.
 Wie man sehen kann benutze ich dafür den `match` Zweig, der in Rust ein sogenanntes Pattern-Matching (Mustervergleichen) benutzt um die Art des Buchstabens zu ermitteln.
-
+### Strings
 ```rust
 match c {
 	...
@@ -240,7 +237,7 @@ match c {
 }
 ```
 Ein spezielles Symbol für die Sprache ist das Anführungszeichen, denn zwei von diesen umgeben immer einen String. Das heißt wenn der Lexer eines begegnet, sammelt er alle Buchstaben bis er das nächste Anführungszeichen hat, und dann gibt er diesen String in einem Token wider.
-
+### Zahlen
 ```rust
 match c {
 	...
@@ -275,7 +272,7 @@ match c {
 }
 ```
 Zahlen werden auf diese Weise gefunden. Wenn der Buchstabe eine ASCII Nummer ist werden alle darauf folgenden ASCII Nummern erst in einem String gesammelt, der dann am Ende in eine Dezimalzahl umgewandelt wird. Falls der Lexer einem Punkt begegnet nimmt er diesen mit und sammelt noch alle Nummern die danach kommen auf.
-
+### Identifiers
 ```rust
 match c {
 	...
@@ -310,7 +307,8 @@ impl Token {
 	...
 }
 ```
-
+Falls der Identifier einen der Schlüsselwörter entspricht, wird das Schlüsselwort wider gegeben und nicht der eigentliche Identifier.
+### Errors
 ```rust
 match c {
 	...

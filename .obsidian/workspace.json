@@ -148,6 +148,8 @@
   },
   "active": "e1ac80851df86fc0",
   "lastOpenFiles": [
+    "docs/Parser.md",
+    "docs/Lexer.md",
     "target/debug/incremental/compiler-2hh6odgpsut22/s-guo26vk1yk-anwdij-b9z0ms1zv9x2h0geej0cw68du/work-products.bin",
     "target/debug/incremental/compiler-2hh6odgpsut22/s-guo26vk1yk-anwdij-b9z0ms1zv9x2h0geej0cw68du/query-cache.bin",
     "target/debug/incremental/compiler-2hh6odgpsut22/s-guo26vk1yk-anwdij-b9z0ms1zv9x2h0geej0cw68du/dep-graph.bin",
@@ -158,9 +160,6 @@
     "target/debug/incremental/compiler-x5rxfik2dq7o/s-guo26vk1yl-1wc0d8f-f9vl8hwq3d1u147k2lahmw7z",
     "target/debug/incremental/compiler-2hh6odgpsut22/s-guo26vk1yk-anwdij-working/work-products.bin",
     "target/debug/incremental/compiler-2hh6odgpsut22/s-guo26vk1yk-anwdij-working/query-cache.bin",
-    "target/debug/incremental/compiler-2hh6odgpsut22/s-guo26vk1yk-anwdij-working/dep-graph.part.bin",
-    "docs/Parser.md",
-    "docs/Lexer.md",
     "docs/Aufbau eines Compilers.md",
     "docs/Was ist ein Compiler?.md",
     "README.md",
