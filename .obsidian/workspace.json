@@ -148,6 +148,7 @@
   },
   "active": "e1ac80851df86fc0",
   "lastOpenFiles": [
+    "test",
     "target/debug/incremental/compiler-1mwwh7xj0o5vz/s-guo2vlpogj-1ppnqp7-3a9wcmwsk7v0qhuh5gyqbuaq6/work-products.bin",
     "target/debug/incremental/compiler-1mwwh7xj0o5vz/s-guo2vlpogj-1ppnqp7-3a9wcmwsk7v0qhuh5gyqbuaq6/tuywcuvl3wuqf1e.o",
     "target/debug/incremental/compiler-1mwwh7xj0o5vz/s-guo2vlpogj-1ppnqp7-3a9wcmwsk7v0qhuh5gyqbuaq6/tbefbgpk7rdgfrq.o",
@@ -158,7 +159,6 @@
     "target/debug/incremental/compiler-1mwwh7xj0o5vz/s-guo2vlpogj-1ppnqp7-3a9wcmwsk7v0qhuh5gyqbuaq6/eaab6gmufn3zd7m.o",
     "target/debug/incremental/compiler-1mwwh7xj0o5vz/s-guo2vlpogj-1ppnqp7-3a9wcmwsk7v0qhuh5gyqbuaq6/dep-graph.bin",
     "target/debug/incremental/compiler-1mwwh7xj0o5vz/s-guo2vlpogj-1ppnqp7-3a9wcmwsk7v0qhuh5gyqbuaq6/ae3j1u2c0z18qkj.o",
-    "target/debug/incremental/compiler-1mwwh7xj0o5vz/s-guo2vlpogj-1ppnqp7-3a9wcmwsk7v0qhuh5gyqbuaq6/6t5pqvqip5huf2f.o",
     "docs/Lexer.md",
     "docs/Aufbau eines Compilers.md",
     "README.md",
