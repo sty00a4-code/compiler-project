@@ -316,3 +316,21 @@ match c {
 }
 ```
 Wenn keiner der vorherigen Muster gepasst hat, gibt der Lexer einen Fehler wider, der besagt, dass ein nicht erkennbarer Buchstabe in dem Input ist, und schließt somit das Programm.
+### Sammeln
+```rust
+fn lex(text: &str) -> Result<Vec<Located<Token>>, Located<LexError>> {
+	let mut lexer = Lexer {
+		chars: text.chars().peekable(),
+		ln: 0,
+		col: 0
+	};
+	let mut tokens = vec![];
+	while let Some(token) = Token::lex_next(&mut lexer)? {
+		tokens.push(token)
+	}
+	Ok(tokens)
+}
+```
+Diese Funktion führt die Beschrieben Schritte immer wieder aus bis es am Ende des Inputs angekommen ist. Somit erhalten wir am Ende eine Liste mit Tokens und können nun weiter mit dem Parsing machen.
+
+Weiter zum [[Parser]].

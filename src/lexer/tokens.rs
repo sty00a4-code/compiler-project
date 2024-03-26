@@ -62,7 +62,7 @@ impl Token {
             Self::Ident(_) => "identifier".to_string(),
             Self::Number(_) => "number".to_string(),
             Self::String(_) => "string".to_string(),
-            _ => format!("{:?}", self.to_string())
+            _ => format!("{:?}", self.to_string()),
         }
     }
 }
@@ -183,7 +183,7 @@ impl Lexable for Token {
                     string.push(lexer.next().unwrap())
                 }
                 if lexer.next() != Some('"') {
-                    return Err(Located::new(LexError::UnclosedString, pos))
+                    return Err(Located::new(LexError::UnclosedString, pos));
                 }
                 Ok(Some(Located::new(Token::String(string), pos)))
             }

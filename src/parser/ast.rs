@@ -1,14 +1,14 @@
-use std::fmt::Display;
-
-use crate::lexer::{position::{Located, Position}, tokens::Token};
-
 use super::parser::{Parsable, Parser};
+use crate::lexer::{
+    position::{Located, Position},
+    tokens::Token,
+};
+use std::fmt::Display;
 
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct Chunk(pub Vec<Located<Statement>>);
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct Block(pub Vec<Located<Statement>>);
-
 #[derive(Debug, Clone, PartialEq)]
 pub enum Statement {
     Block(Block),
@@ -28,7 +28,7 @@ pub enum Statement {
     Def {
         ident: Located<String>,
         params: Vec<Located<String>>,
-        body: Located<Block>
+        body: Located<Block>,
     },
     If {
         cond: Located<Expression>,
@@ -84,51 +84,54 @@ pub enum Atom {
     Ident(String),
     Number(f64),
     String(String),
-    Expression(Box<Located<Expression>>)
+    Expression(Box<Located<Expression>>),
 }
 
+macro_rules! expected {
+    ($parser:ident) => {{
+        let Some(token) = $parser.next() else {
+            return Err(Located::new(
+                ParserError::UnexpectedEOF,
+                Position::default(),
+            ));
+        };
+        token
+    }};
+    ($parser:ident : &) => {{
+        let Some(token) = $parser.peek() else {
+            return Err(Located::new(
+                ParserError::UnexpectedEOF,
+                Position::default(),
+            ));
+        };
+        token
+    }};
+    ($parser:ident : $token:ident) => {{
+        let Some(Located { value: token, pos }) = $parser.next() else {
+            return Err(Located::new(
+                ParserError::UnexpectedEOF,
+                Position::default(),
+            ));
+        };
+        if token != Token::$token {
+            return Err(Located::new(
+                ParserError::ExpectedToken {
+                    expected: Token::$token,
+                    got: token,
+                },
+                pos,
+            ));
+        }
+        Located { value: token, pos }
+    }};
+}
 #[derive(Debug, Clone, PartialEq)]
 pub enum ParserError {
     UnexpectedEOF,
     UnexpectedToken(Token),
-    ExpectedToken {
-        expected: Token,
-        got: Token,
-    },
+    ExpectedToken { expected: Token, got: Token },
 }
 
-macro_rules! expected {
-    ($parser:ident) => {
-        {
-            let Some(token) = $parser.next() else {
-                return Err(Located::new(ParserError::UnexpectedEOF, Position::default()))
-            };
-            token
-        }
-    };
-    ($parser:ident : &) => {
-        {
-            let Some(token) = $parser.peek() else {
-                return Err(Located::new(ParserError::UnexpectedEOF, Position::default()))
-            };
-            token
-        }
-    };
-    ($parser:ident : $token:ident) => {
-        {
-            let Some(Located { value: token, pos }) = $parser.next() else {
-                return Err(Located::new(ParserError::UnexpectedEOF, Position::default()))
-            };
-            if token != Token::$token {
-                return Err(Located::new(ParserError::ExpectedToken {
-                    expected: Token::$token,
-                    got: token,
-                }, pos))
-            }
-            Located { value: token, pos }
-        }
-    };
-}
 impl Parsable for Chunk {
     type Error = ParserError;
     fn parse(parser: &mut Parser) -> Result<Located<Self>, Located<Self::Error>> {
@@ -144,7 +147,11 @@ impl Parsable for Block {
     fn parse(parser: &mut Parser) -> Result<Located<Self>, Located<Self::Error>> {
         let Located { value: _, pos } = expected!(parser: BraceLeft);
         let mut stats = vec![];
-        while let Some(Located { value: token, pos: _ }) = parser.peek() {
+        while let Some(Located {
+            value: token,
+            pos: _,
+        }) = parser.peek()
+        {
             if token == &Token::BraceRight {
                 break;
             }
@@ -159,8 +166,10 @@ impl Parsable for Statement {
     fn parse(parser: &mut Parser) -> Result<Located<Self>, Located<Self::Error>> {
         let Located { value: token, pos } = expected!(parser:&);
         match token {
-            
-            _ => Err(Located::new(ParserError::UnexpectedToken(token.clone()), pos.clone()))
+            _ => Err(Located::new(
+                ParserError::UnexpectedToken(token.clone()),
+                pos.clone(),
+            )),
         }
     }
 }
@@ -171,7 +180,10 @@ impl Parsable for Expression {
     }
 }
 impl Expression {
-    pub fn binary(parser: &mut Parser, layer: usize) -> Result<Located<Self>, Located<ParserError>> {
+    pub fn binary(
+        parser: &mut Parser,
+        layer: usize,
+    ) -> Result<Located<Self>, Located<ParserError>> {
         todo!()
     }
     pub fn unary(parser: &mut Parser, layer: usize) -> Result<Located<Self>, Located<ParserError>> {
@@ -179,20 +191,34 @@ impl Expression {
     }
     pub fn call(parser: &mut Parser) -> Result<Located<Self>, Located<ParserError>> {
         let mut head = Atom::parse(parser)?.map(Self::Atom);
-        while let Some(Located { value: token, pos: _ }) = parser.peek() {
+        while let Some(Located {
+            value: token,
+            pos: _,
+        }) = parser.peek()
+        {
             match token {
                 Token::ParanLeft => {
                     parser.next();
                     let pos = head.pos.clone();
                     let mut args = vec![];
-                    while let Some(Located { value: token, pos: _ }) = parser.peek() {
+                    while let Some(Located {
+                        value: token,
+                        pos: _,
+                    }) = parser.peek()
+                    {
                         if token == &Token::ParanRight {
                             break;
                         }
                         args.push(Expression::parse(parser)?);
                     }
                     expected!(parser: ParanRight);
-                    head = Located::new(Self::Call { head: Box::new(head), args }, pos)
+                    head = Located::new(
+                        Self::Call {
+                            head: Box::new(head),
+                            args,
+                        },
+                        pos,
+                    )
                 }
                 _ => break,
             }
@@ -213,19 +239,19 @@ impl Parsable for Atom {
                 expected!(parser: ParanRight);
                 Ok(Located::new(Self::Expression(Box::new(expr)), pos))
             }
-            token => Err(Located::new(ParserError::UnexpectedToken(token), pos))
+            token => Err(Located::new(ParserError::UnexpectedToken(token), pos)),
         }
     }
 }
-impl Atom {
-
-}
+impl Atom {}
 impl Display for ParserError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             ParserError::UnexpectedEOF => write!(f, "unexpected end of file"),
             ParserError::UnexpectedToken(token) => write!(f, "unexpected token {}", token.name()),
-            ParserError::ExpectedToken { expected, got } => write!(f, "expected {}, got {}", expected.name(), got.name()),
+            ParserError::ExpectedToken { expected, got } => {
+                write!(f, "expected {}, got {}", expected.name(), got.name())
+            }
         }
     }
 }

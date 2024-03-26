@@ -6,7 +6,7 @@ use super::position::{Located, Position};
 pub struct Lexer<'a> {
     pub chars: Peekable<Chars<'a>>,
     pub ln: usize,
-    pub col: usize
+    pub col: usize,
 }
 impl<'a> Iterator for Lexer<'a> {
     type Item = char;
@@ -36,7 +36,7 @@ pub trait Lexable: Sized {
         let mut lexer = Lexer {
             chars: text.chars().peekable(),
             ln: 0,
-            col: 0
+            col: 0,
         };
         let mut tokens = vec![];
         while let Some(token) = Self::lex_next(&mut lexer)? {

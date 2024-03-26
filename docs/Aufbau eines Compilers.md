@@ -2,3 +2,5 @@ Ein klassischer Compiler kann nicht einfach vom Text zum Byte Code gehen, sonder
 1. __Lexikalische Analyse__: Die Atomaren Teile des Textes (sogenannte Tokens)
 2. __Syntaktische Analyse__: Der Syntax Baum, der darstellt wo was ist.
 3. __Compilierung__: Die tatsächliche Umwandlung in den Byte Code.
+
+Weiter zum [[Lexer]]
