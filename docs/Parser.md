@@ -9,8 +9,8 @@ Die Tokens:
 [NUMBER(1)] [PLUS] [NUMBER(2)] [STAR] [NUMBER(3)]
 ```
 Der AST:
-```lua
-    +
+```h
+	+
   /   \
  1     *
 	  / \
@@ -19,10 +19,10 @@ Der AST:
 In JSON dargestellt:
 ```json
 {
-	"operator": PLUS,
+	"operator": "+",
 	"left": 1,
 	"right": {
-		"operator": STAR,
+		"operator": "*",
 		"left": 2,
 		"right": 3
 	}
