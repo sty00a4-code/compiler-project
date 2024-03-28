@@ -10,7 +10,7 @@ Die Tokens:
 ```
 Der AST:
 ```h
-	+
+    +
   /   \
  1     *
 	  / \
