@@ -13,8 +13,8 @@ Der AST:
     +
   /   \
  1     *
-	  / \
-	 2   3
+      / \
+     2   3
 ```
 In JSON dargestellt:
 ```json
