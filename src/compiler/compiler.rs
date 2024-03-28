@@ -100,6 +100,7 @@ impl Compilable for Located<Chunk> {
         for stat in self.value.0 {
             stat.compile(compiler)?;
         }
+        compiler.frame_mut().closure.write(ByteCode::Return { src: None }, self.pos);
         let frame = compiler.pop_frame().unwrap();
         Ok(frame.closure)
     }
@@ -209,8 +210,8 @@ impl Compilable for Located<Statement> {
                         compiler.frame_mut().new_local(param);
                     }
                     body.compile(compiler)?;
+                    compiler.frame_mut().closure.write(ByteCode::Return { src: None }, pos.clone());
                     let frame = compiler.pop_frame().unwrap();
-                    dbg!(&compiler);
                     let closure = Rc::new(frame.closure);
                     compiler.frame_mut().closure.new_closure(closure)
                 };
@@ -232,6 +233,7 @@ impl Compilable for Located<Statement> {
                     .write(ByteCode::default(), pos.clone());
                 case.compile(compiler)?;
                 let case_exit_addr = compiler.frame_mut().closure.write(ByteCode::default(), pos);
+                let else_addr = compiler.frame_mut().closure.code.len() as Address;
                 if let Some(else_case) = else_case {
                     else_case.compile(compiler)?;
                 }
@@ -239,9 +241,9 @@ impl Compilable for Located<Statement> {
                 compiler.frame_mut().closure.overwrite(
                     check_addr,
                     ByteCode::JumpIf {
-                        not: false,
+                        not: true,
                         cond,
-                        addr: case_exit_addr,
+                        addr: else_addr,
                     },
                 );
                 compiler
@@ -258,10 +260,15 @@ impl Compilable for Located<Statement> {
                     .closure
                     .write(ByteCode::default(), pos.clone());
                 body.compile(compiler)?;
-                let exit_addr = compiler
+                compiler
                     .frame_mut()
                     .closure
                     .write(ByteCode::Jump { addr: cond_addr }, pos);
+                let exit_addr = compiler
+                    .frame_mut()
+                    .closure
+                    .code
+                    .len() as Address;
                 compiler.frame_mut().closure.overwrite(
                     check_addr,
                     ByteCode::JumpIf {
@@ -270,10 +277,13 @@ impl Compilable for Located<Statement> {
                         addr: exit_addr,
                     },
                 );
-
                 Ok(None)
             }
-            Statement::Return(expr) => Ok(Some(expr.compile(compiler)?)),
+            Statement::Return(expr) => {
+                let src = expr.compile(compiler)?;
+                compiler.frame_mut().closure.write(ByteCode::Return { src: Some(src) }, pos);
+                Ok(Some(src))
+            }
         }
     }
 }

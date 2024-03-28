@@ -1,7 +1,7 @@
-use crate::{lexer::lex, parser::parse};
+use crate::{interpreter::run, lexer::lex, parser::parse};
 use compiler::compile;
 use lexer::position::Located;
-use std::{env, fs, process::exit};
+use std::{env, fs, process::exit, rc::Rc};
 
 pub mod compiler;
 pub mod interpreter;
@@ -35,7 +35,16 @@ fn main() {
                 exit(1);
             })
             .unwrap();
-        dbg!(closure);
+        // dbg!(&closure);
+        let value = run(&Rc::new(closure))
+            .map_err(|Located { value: err, pos }| {
+                eprintln!("ERROR {path}:{}:{}: {err}", pos.ln + 1, pos.col + 1);
+                exit(1);
+            })
+            .unwrap();
+        if let Some(value) = value {
+            println!("{value}");
+        }
     } else {
         eprintln!("ERROR: no input file path provided");
         exit(1);
