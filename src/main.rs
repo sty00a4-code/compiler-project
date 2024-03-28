@@ -1,4 +1,5 @@
 use crate::{lexer::lex, parser::parse};
+use compiler::compile;
 use lexer::position::Located;
 use std::{env, fs, process::exit};
 
@@ -28,7 +29,13 @@ fn main() {
                 exit(1);
             })
             .unwrap();
-        dbg!(chunk);
+        let closure = compile(chunk)
+            .map_err(|Located { value: _, pos }| {
+                eprintln!("ERROR {path}:{}:{}: compiler error", pos.ln + 1, pos.col + 1);
+                exit(1);
+            })
+            .unwrap();
+        dbg!(closure);
     } else {
         eprintln!("ERROR: no input file path provided");
         exit(1);

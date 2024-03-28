@@ -1,7 +1,11 @@
-use super::bytecode::{Closure, Register};
-use crate::{lexer::position::Located, parser::ast::*};
-use std::collections::HashMap;
+use super::bytecode::{Address, BinaryOperation, ByteCode, Closure, Register, UnaryOperation};
+use crate::{
+    lexer::position::{Located, Position},
+    parser::ast::*,
+};
+use std::{collections::HashMap, rc::Rc};
 
+#[derive(Debug, Default)]
 pub struct Compiler {
     pub frames: Vec<Frame>,
 }
@@ -19,7 +23,8 @@ pub struct Scope {
 
 pub trait Compilable {
     type Output;
-    fn compile(self, compiler: &mut Compiler) -> Self::Output;
+    type Error;
+    fn compile(self, compiler: &mut Compiler) -> Result<Self::Output, Self::Error>;
 }
 impl Compiler {
     pub fn push_frame(&mut self) {
@@ -51,11 +56,20 @@ impl Frame {
             self.registers = scope.offset;
         }
     }
-    pub fn local(&self, ident: &str) -> Option<Register> {
-        self.scopes
+    pub fn local(&mut self, ident: &str, pos: Position) -> Register {
+        if let Some(reg) = self
+            .scopes
             .iter()
             .rev()
             .find_map(|scope| scope.locals.get(ident).copied())
+        {
+            reg
+        } else {
+            let reg = self.new_register();
+            let addr = self.closure.new_string(ident.to_string());
+            self.closure.write(ByteCode::Global { dst: reg, addr }, pos);
+            reg
+        }
     }
     pub fn new_register(&mut self) -> Register {
         let register = self.registers;
@@ -76,41 +90,308 @@ impl Frame {
     }
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub enum CompileError {}
 impl Compilable for Located<Chunk> {
-    type Output = ();
-    fn compile(self, compiler: &mut Compiler) -> Self::Output {
+    type Output = Closure;
+    type Error = Located<CompileError>;
+    fn compile(self, compiler: &mut Compiler) -> Result<Self::Output, Self::Error> {
         compiler.push_frame();
         for stat in self.value.0 {
-            stat.compile(compiler);
+            stat.compile(compiler)?;
         }
-        compiler.pop_frame();
+        let frame = compiler.pop_frame().unwrap();
+        Ok(frame.closure)
     }
 }
 impl Compilable for Located<Block> {
-    type Output = ();
-    fn compile(self, compiler: &mut Compiler) -> Self::Output {
+    type Output = Option<u16>;
+    type Error = Located<CompileError>;
+    fn compile(self, compiler: &mut Compiler) -> Result<Self::Output, Self::Error> {
         compiler.frame_mut().push_scope();
         for stat in self.value.0 {
-            stat.compile(compiler);
+            if let Some(reg) = stat.compile(compiler)? {
+                compiler.frame_mut().pop_scope();
+                return Ok(Some(reg));
+            }
         }
         compiler.frame_mut().pop_scope();
+        Ok(None)
     }
 }
 impl Compilable for Located<Statement> {
     type Output = Option<Register>;
-    fn compile(self, compiler: &mut Compiler) -> Self::Output {
-        todo!()
+    type Error = Located<CompileError>;
+    fn compile(self, compiler: &mut Compiler) -> Result<Self::Output, Self::Error> {
+        let Located { value: stat, pos } = self;
+        match stat {
+            Statement::Block(block) => Located::new(block, pos).compile(compiler),
+            Statement::Let {
+                ident:
+                    Located {
+                        value: ident,
+                        pos: _,
+                    },
+                expr,
+            } => {
+                let reg = compiler.frame_mut().new_local(ident);
+                let src = expr.compile(compiler)?;
+                compiler
+                    .frame_mut()
+                    .closure
+                    .write(ByteCode::Move { dst: reg, src }, pos);
+                Ok(None)
+            }
+            Statement::Assign {
+                ident:
+                    Located {
+                        value: ident,
+                        pos: ident_pos,
+                    },
+                expr,
+            } => {
+                let reg = compiler.frame_mut().local(&ident, ident_pos);
+                let src = expr.compile(compiler)?;
+                compiler
+                    .frame_mut()
+                    .closure
+                    .write(ByteCode::Move { dst: reg, src }, pos);
+                Ok(None)
+            }
+            Statement::Call {
+                ident:
+                    Located {
+                        value: ident,
+                        pos: ident_pos,
+                    },
+                args,
+            } => {
+                let func = compiler.frame_mut().local(&ident, ident_pos);
+                let args_len = args.len() as u8;
+                let offset = compiler.frame().registers;
+                compiler.frame_mut().registers += args_len as Register;
+                for (reg, arg) in (offset..offset + args_len as Register).zip(args) {
+                    let pos = arg.pos.clone();
+                    let src = arg.compile(compiler)?;
+                    compiler
+                        .frame_mut()
+                        .closure
+                        .write(ByteCode::Move { dst: reg, src }, pos);
+                }
+                compiler.frame_mut().closure.write(
+                    ByteCode::Call {
+                        func,
+                        offset,
+                        args_len,
+                        dst: None,
+                    },
+                    pos,
+                );
+                Ok(None)
+            }
+            Statement::Def {
+                ident:
+                    Located {
+                        value: ident,
+                        pos: _,
+                    },
+                params,
+                body,
+            } => {
+                let reg = compiler.frame_mut().new_local(ident);
+                let addr = {
+                    compiler.push_frame();
+                    for Located {
+                        value: param,
+                        pos: _,
+                    } in params
+                    {
+                        compiler.frame_mut().new_local(param);
+                    }
+                    body.compile(compiler)?;
+                    let frame = compiler.pop_frame().unwrap();
+                    dbg!(&compiler);
+                    let closure = Rc::new(frame.closure);
+                    compiler.frame_mut().closure.new_closure(closure)
+                };
+                compiler
+                    .frame_mut()
+                    .closure
+                    .write(ByteCode::Closure { dst: reg, addr }, pos);
+                Ok(None)
+            }
+            Statement::If {
+                cond,
+                case,
+                else_case,
+            } => {
+                let cond = cond.compile(compiler)?;
+                let check_addr = compiler
+                    .frame_mut()
+                    .closure
+                    .write(ByteCode::default(), pos.clone());
+                case.compile(compiler)?;
+                let case_exit_addr = compiler.frame_mut().closure.write(ByteCode::default(), pos);
+                if let Some(else_case) = else_case {
+                    else_case.compile(compiler)?;
+                }
+                let exit_addr = compiler.frame_mut().closure.code.len() as Address;
+                compiler.frame_mut().closure.overwrite(
+                    check_addr,
+                    ByteCode::JumpIf {
+                        not: false,
+                        cond,
+                        addr: case_exit_addr,
+                    },
+                );
+                compiler
+                    .frame_mut()
+                    .closure
+                    .overwrite(case_exit_addr, ByteCode::Jump { addr: exit_addr });
+                Ok(None)
+            }
+            Statement::While { cond, body } => {
+                let cond_addr = compiler.frame_mut().closure.code.len() as Address;
+                let cond = cond.compile(compiler)?;
+                let check_addr = compiler
+                    .frame_mut()
+                    .closure
+                    .write(ByteCode::default(), pos.clone());
+                body.compile(compiler)?;
+                let exit_addr = compiler
+                    .frame_mut()
+                    .closure
+                    .write(ByteCode::Jump { addr: cond_addr }, pos);
+                compiler.frame_mut().closure.overwrite(
+                    check_addr,
+                    ByteCode::JumpIf {
+                        not: true,
+                        cond,
+                        addr: exit_addr,
+                    },
+                );
+
+                Ok(None)
+            }
+            Statement::Return(expr) => Ok(Some(expr.compile(compiler)?)),
+        }
+    }
+}
+impl From<BinaryOperator> for BinaryOperation {
+    fn from(value: BinaryOperator) -> Self {
+        match value {
+            BinaryOperator::Plus => Self::Add,
+            BinaryOperator::Minus => Self::Sub,
+            BinaryOperator::Star => Self::Mul,
+            BinaryOperator::Slash => Self::Div,
+            BinaryOperator::Percent => Self::Mod,
+            BinaryOperator::Exponent => Self::Pow,
+            BinaryOperator::EqualEqual => Self::EQ,
+            BinaryOperator::ExclamationEqual => Self::NE,
+            BinaryOperator::Less => Self::LT,
+            BinaryOperator::Greater => Self::GT,
+            BinaryOperator::LessEqual => Self::LE,
+            BinaryOperator::GreaterEqual => Self::GE,
+            BinaryOperator::Ampersand => Self::And,
+            BinaryOperator::Pipe => Self::Or,
+        }
+    }
+}
+impl From<UnaryOperator> for UnaryOperation {
+    fn from(value: UnaryOperator) -> Self {
+        match value {
+            UnaryOperator::Minus => Self::Neg,
+            UnaryOperator::Exclamation => Self::Not,
+        }
     }
 }
 impl Compilable for Located<Expression> {
     type Output = Register;
-    fn compile(self, compiler: &mut Compiler) -> Self::Output {
-        todo!()
+    type Error = Located<CompileError>;
+    fn compile(self, compiler: &mut Compiler) -> Result<Self::Output, Self::Error> {
+        let Located { value: expr, pos } = self;
+        match expr {
+            Expression::Atom(atom) => Located::new(atom, pos).compile(compiler),
+            Expression::Binary { op, left, right } => {
+                let dst = compiler.frame_mut().new_register();
+                let left = left.compile(compiler)?;
+                let right = right.compile(compiler)?;
+                let op = op.into();
+                compiler.frame_mut().closure.write(
+                    ByteCode::Binary {
+                        op,
+                        dst,
+                        left,
+                        right,
+                    },
+                    pos,
+                );
+                Ok(dst)
+            }
+            Expression::Unary { op, right } => {
+                let dst = compiler.frame_mut().new_register();
+                let src = right.compile(compiler)?;
+                let op = op.into();
+                compiler
+                    .frame_mut()
+                    .closure
+                    .write(ByteCode::Unary { op, dst, src }, pos);
+                Ok(dst)
+            }
+            Expression::Call { head, args } => {
+                let dst = compiler.frame_mut().new_register();
+                let func = head.compile(compiler)?;
+                let args_len = args.len() as u8;
+                let offset = compiler.frame().registers;
+                compiler.frame_mut().registers += args_len as Register;
+                for (reg, arg) in (offset..offset + args_len as Register).zip(args) {
+                    let pos = arg.pos.clone();
+                    let src = arg.compile(compiler)?;
+                    compiler
+                        .frame_mut()
+                        .closure
+                        .write(ByteCode::Move { dst: reg, src }, pos);
+                }
+                compiler.frame_mut().closure.write(
+                    ByteCode::Call {
+                        func,
+                        offset,
+                        args_len,
+                        dst: Some(dst),
+                    },
+                    pos,
+                );
+                Ok(dst)
+            }
+        }
     }
 }
 impl Compilable for Located<Atom> {
     type Output = Register;
-    fn compile(self, compiler: &mut Compiler) -> Self::Output {
-        todo!()
+    type Error = Located<CompileError>;
+    fn compile(self, compiler: &mut Compiler) -> Result<Self::Output, Self::Error> {
+        let Located { value: atom, pos } = self;
+        match atom {
+            Atom::Ident(ident) => Ok(compiler.frame_mut().local(&ident, pos)),
+            Atom::Number(number) => {
+                let addr = compiler.frame_mut().closure.new_number(number);
+                let dst = compiler.frame_mut().new_register();
+                compiler
+                    .frame_mut()
+                    .closure
+                    .write(ByteCode::Number { dst, addr }, pos);
+                Ok(dst)
+            }
+            Atom::String(string) => {
+                let addr = compiler.frame_mut().closure.new_string(string);
+                let dst = compiler.frame_mut().new_register();
+                compiler
+                    .frame_mut()
+                    .closure
+                    .write(ByteCode::String { dst, addr }, pos);
+                Ok(dst)
+            }
+            Atom::Expression(expr) => expr.compile(compiler),
+        }
     }
 }

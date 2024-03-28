@@ -1,10 +1,13 @@
-use crate::lexer::position::Located;
+use std::rc::Rc;
+
+use crate::lexer::position::{Located, Position};
 
 pub type Register = u16;
 pub type Address = u32;
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 #[repr(u8)]
 pub enum ByteCode {
+    #[default]
     None,
     Jump {
         addr: Address,
@@ -17,12 +20,12 @@ pub enum ByteCode {
 
     Call {
         func: Register,
-        args: Register,
+        offset: Register,
         args_len: u8,
-        dst: Option<Register>
+        dst: Option<Register>,
     },
     Return {
-        src: Option<Register>
+        src: Option<Register>,
     },
 
     Move {
@@ -31,15 +34,19 @@ pub enum ByteCode {
     },
     String {
         dst: Register,
-        addr: Address
+        addr: Address,
     },
     Number {
         dst: Register,
-        addr: Address
+        addr: Address,
+    },
+    Closure {
+        dst: Register,
+        addr: Address,
     },
     Global {
         dst: Register,
-        addr: Address
+        addr: Address,
     },
 
     Binary {
@@ -84,6 +91,7 @@ pub struct Closure {
     pub registers: Register,
     pub strings: Vec<String>,
     pub numbers: Vec<f64>,
+    pub closures: Vec<Rc<Self>>,
 }
 
 impl Closure {
@@ -92,5 +100,44 @@ impl Closure {
     }
     pub fn number(&self, addr: Address) -> Option<&f64> {
         self.numbers.get(addr as usize)
+    }
+    pub fn closure(&self, addr: Address) -> Option<&Rc<Closure>> {
+        self.closures.get(addr as usize)
+    }
+    pub fn new_string(&mut self, string: String) -> Address {
+        if let Some(addr) = self.strings.iter().position(|s| s == &string) {
+            return addr as Address
+        }
+        let addr = self.strings.len();
+        self.strings.push(string);
+        addr as Address
+    }
+    pub fn new_closure(&mut self, closure: Rc<Closure>) -> Address {
+        let addr = self.closures.len();
+        self.closures.push(closure);
+        addr as Address
+    }
+    pub fn new_number(&mut self, number: f64) -> Address {
+        if let Some(addr) = self.numbers.iter().position(|n| n == &number) {
+            return addr as Address
+        }
+        let addr = self.numbers.len();
+        self.numbers.push(number);
+        addr as Address
+    }
+    pub fn write(&mut self, bytecode: ByteCode, pos: Position) -> Address {
+        let addr = self.code.len();
+        self.code.push(Located::new(bytecode, pos));
+        addr as Address
+    }
+    pub fn overwrite(&mut self, addr: Address, bytecode: ByteCode) {
+        let Located {
+            value: old_bytecode,
+            pos: _,
+        } = self
+            .code
+            .get_mut(addr as usize)
+            .expect("invalid overwrite address");
+        *old_bytecode = bytecode;
     }
 }
