@@ -10,7 +10,7 @@ Die Tokens:
 ```
 Der AST:
 ```lua
-	+
+    +
   /   \
  1     *
 	  / \
