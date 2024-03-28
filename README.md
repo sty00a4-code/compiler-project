@@ -2,7 +2,7 @@ In dieser Präsentation werde ich Schritt für Schritt erklären wie man einen C
 # Inhalt
 1. [Was ist ein Compiler?](docs/Was%20ist%20ein%20Compiler.md)
 2. [Aufbau eines Compilers](docs/Aufbau%20eines%20Compilers.md)
-3. [Lexer](docs/Lexer.md)
-4. [Parser](docs/Parser.md)
-5. [Compiler](docs/Compiler.md)
-6. [Interpreter](docs/Interpreter.md)
+	1. [Lexer](docs/Lexer.md)
+	2. [Parser](docs/Parser.md)
+	3. [Compiler](docs/Compiler.md)
+3. [Interpreter](docs/Interpreter.md)
