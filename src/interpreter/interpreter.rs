@@ -262,6 +262,24 @@ impl Interpreter {
                 let mut dst = self.register(dst).expect("register not found").borrow_mut();
                 *dst = value;
             }
+            ByteCode::SetGlobal { addr, src } => {
+                let value = self.register(src).expect("register not found").borrow().clone();
+                let ident = self
+                    .call_frame()
+                    .expect("no call frame on stack")
+                    .closure
+                    .string(addr)
+                    .expect("string not found")
+                    .clone();
+                let old_value = {
+                    self.globals.get_mut(&ident)
+                };
+                if let Some(old_value) = old_value {
+                    *old_value = value;
+                } else {
+                    self.globals.insert(ident, value);
+                }
+            }
             ByteCode::Binary {
                 op,
                 dst,
