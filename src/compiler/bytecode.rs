@@ -1,5 +1,4 @@
 use std::rc::Rc;
-
 use crate::lexer::position::{Located, Position};
 
 pub type Register = u16;
@@ -44,9 +43,14 @@ pub enum ByteCode {
         dst: Register,
         addr: Address,
     },
+
     Global {
         dst: Register,
         addr: Address,
+    },
+    SetGlobal {
+        addr: Address,
+        src: Register
     },
 
     Binary {

@@ -1,8 +1,5 @@
 use super::bytecode::{Address, BinaryOperation, ByteCode, Closure, Register, UnaryOperation};
-use crate::{
-    lexer::position::{Located, Position},
-    parser::ast::*,
-};
+use crate::{lexer::position::Located, parser::ast::*};
 use std::{collections::HashMap, rc::Rc};
 
 #[derive(Debug, Default)]
@@ -56,20 +53,11 @@ impl Frame {
             self.registers = scope.offset;
         }
     }
-    pub fn local(&mut self, ident: &str, pos: Position) -> Register {
-        if let Some(reg) = self
-            .scopes
+    pub fn local(&self, ident: &str) -> Option<Register> {
+        self.scopes
             .iter()
             .rev()
             .find_map(|scope| scope.locals.get(ident).copied())
-        {
-            reg
-        } else {
-            let reg = self.new_register();
-            let addr = self.closure.new_string(ident.to_string());
-            self.closure.write(ByteCode::Global { dst: reg, addr }, pos);
-            reg
-        }
     }
     pub fn new_register(&mut self) -> Register {
         let register = self.registers;
@@ -100,7 +88,10 @@ impl Compilable for Located<Chunk> {
         for stat in self.value.0 {
             stat.compile(compiler)?;
         }
-        compiler.frame_mut().closure.write(ByteCode::Return { src: None }, self.pos);
+        compiler
+            .frame_mut()
+            .closure
+            .write(ByteCode::Return { src: None }, self.pos);
         let frame = compiler.pop_frame().unwrap();
         Ok(frame.closure)
     }
@@ -147,16 +138,24 @@ impl Compilable for Located<Statement> {
                 ident:
                     Located {
                         value: ident,
-                        pos: ident_pos,
+                        pos: _,
                     },
                 expr,
             } => {
-                let reg = compiler.frame_mut().local(&ident, ident_pos);
+                let reg = compiler.frame_mut().local(&ident);
                 let src = expr.compile(compiler)?;
-                compiler
-                    .frame_mut()
-                    .closure
-                    .write(ByteCode::Move { dst: reg, src }, pos);
+                if let Some(reg) = reg {
+                    compiler
+                        .frame_mut()
+                        .closure
+                        .write(ByteCode::Move { dst: reg, src }, pos);
+                } else {
+                    let addr = compiler.frame_mut().closure.new_string(ident);
+                    compiler
+                        .frame_mut()
+                        .closure
+                        .write(ByteCode::SetGlobal { addr, src }, pos);
+                }
                 Ok(None)
             }
             Statement::Call {
@@ -167,7 +166,17 @@ impl Compilable for Located<Statement> {
                     },
                 args,
             } => {
-                let func = compiler.frame_mut().local(&ident, ident_pos);
+                let func = if let Some(reg) = compiler.frame_mut().local(&ident) {
+                    reg
+                } else {
+                    let addr = compiler.frame_mut().closure.new_string(ident);
+                    let dst = compiler.frame_mut().new_register();
+                    compiler
+                        .frame_mut()
+                        .closure
+                        .write(ByteCode::Global { dst, addr }, ident_pos);
+                    dst
+                };
                 let args_len = args.len() as u8;
                 let offset = compiler.frame().registers;
                 compiler.frame_mut().registers += args_len as Register;
@@ -210,7 +219,10 @@ impl Compilable for Located<Statement> {
                         compiler.frame_mut().new_local(param);
                     }
                     body.compile(compiler)?;
-                    compiler.frame_mut().closure.write(ByteCode::Return { src: None }, pos.clone());
+                    compiler
+                        .frame_mut()
+                        .closure
+                        .write(ByteCode::Return { src: None }, pos.clone());
                     let frame = compiler.pop_frame().unwrap();
                     let closure = Rc::new(frame.closure);
                     compiler.frame_mut().closure.new_closure(closure)
@@ -264,11 +276,7 @@ impl Compilable for Located<Statement> {
                     .frame_mut()
                     .closure
                     .write(ByteCode::Jump { addr: cond_addr }, pos);
-                let exit_addr = compiler
-                    .frame_mut()
-                    .closure
-                    .code
-                    .len() as Address;
+                let exit_addr = compiler.frame_mut().closure.code.len() as Address;
                 compiler.frame_mut().closure.overwrite(
                     check_addr,
                     ByteCode::JumpIf {
@@ -281,7 +289,10 @@ impl Compilable for Located<Statement> {
             }
             Statement::Return(expr) => {
                 let src = expr.compile(compiler)?;
-                compiler.frame_mut().closure.write(ByteCode::Return { src: Some(src) }, pos);
+                compiler
+                    .frame_mut()
+                    .closure
+                    .write(ByteCode::Return { src: Some(src) }, pos);
                 Ok(Some(src))
             }
         }
@@ -382,7 +393,18 @@ impl Compilable for Located<Atom> {
     fn compile(self, compiler: &mut Compiler) -> Result<Self::Output, Self::Error> {
         let Located { value: atom, pos } = self;
         match atom {
-            Atom::Ident(ident) => Ok(compiler.frame_mut().local(&ident, pos)),
+            Atom::Expression(expr) => expr.compile(compiler),
+            Atom::Ident(ident) => Ok(if let Some(reg) = compiler.frame_mut().local(&ident) {
+                reg
+            } else {
+                let addr = compiler.frame_mut().closure.new_string(ident);
+                let dst = compiler.frame_mut().new_register();
+                compiler
+                    .frame_mut()
+                    .closure
+                    .write(ByteCode::Global { dst, addr }, pos);
+                dst
+            }),
             Atom::Number(number) => {
                 let addr = compiler.frame_mut().closure.new_number(number);
                 let dst = compiler.frame_mut().new_register();
@@ -401,7 +423,6 @@ impl Compilable for Located<Atom> {
                     .write(ByteCode::String { dst, addr }, pos);
                 Ok(dst)
             }
-            Atom::Expression(expr) => expr.compile(compiler),
         }
     }
 }
