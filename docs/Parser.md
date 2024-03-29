@@ -102,7 +102,7 @@ atom:
 	| '(' expr ')'
 ```
 ### In Rust
-Der Rust Code ist fast so wie der PEG Code, nur dass ich die Binären Operationen vereinfacht habe, was den ganzen Code kleiner macht und mir erlaubt später vielleicht mehr Operatoren hinzuzufügen.
+Der Rust Code ist fast so wie der PEG Code, nur dass ich die Binären Operationen vereinfacht habe, was den ganzen Code kleiner macht und mir erlaubt später vielleicht mehr Operatoren einfacher hinzuzufügen.
 ```rust
 struct Chunk(Vec<Located<Statement>>);
 struct Block(Vec<Located<Statement>>);
@@ -239,6 +239,27 @@ impl UnaryOperator {
 }
 ```
 Die Konstante `LAYER` in beiden Implementierungen hat ein statische Referenz zu einem Array wo Arrays mit Operatoren drin sind (auch statische Referenz). Dieser ist dafür da später beim parsen die Layer nach Index identifizieren zu können. Wenn der Parser bei Layer `n` ist, weiß er, dass er als nächstes zu Layer `n + 1` muss. Diese Optimierung habe nach öfteren Parser kreieren selber entwickelt, dennoch kann ich mir vorstellen, dass das schon jemanden vor mir erfunden hat, aber so lange ich das nicht weiß, werde ich mir immer wieder selber auf die Schulter klopfen :)
+### Beispiele
+Hier ein paar Beispiele wie ein Source Code in dieser Sprache aussehen könnte
+```
+let a = 1
+print(a)
+```
+```
+while yes() {
+	print("still not done...")
+}
+```
+```
+let a = 3
+if a == 1 {
+	print("one")
+} else if a == 2 {
+	print("tow")
+} else {
+	print("no idea :(")
+}
+```
 ### Errors
 Für die Fehler die beim Parsen enstehen können habe ich folgenden Error `enum` geschrieben:
 ```rust

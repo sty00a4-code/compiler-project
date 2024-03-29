@@ -21,10 +21,12 @@ pub struct CallFrame {
 #[derive(Debug, Clone, PartialEq)]
 pub enum RunTimeError {
     Binary {
+        op: BinaryOperation,
         left: &'static str,
         right: &'static str,
     },
     Unary {
+        op: UnaryOperation,
         right: &'static str,
     },
     CannotCall(&'static str),
@@ -33,11 +35,11 @@ pub enum RunTimeError {
 impl Display for RunTimeError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            RunTimeError::Binary { left, right } => {
-                write!(f, "cannot perform binary operation on {left} with {right}")
+            RunTimeError::Binary { op, left, right } => {
+                write!(f, "cannot perform binary operation {op:?} on {left} with {right}")
             }
-            RunTimeError::Unary { right } => {
-                write!(f, "cannot perform binary operation on {right}")
+            RunTimeError::Unary { op, right } => {
+                write!(f, "cannot perform unary operation {op:?} on {right}")
             }
             RunTimeError::CannotCall(typ) => write!(f, "cannot call {typ}"),
             RunTimeError::Custome(err) => write!(f, "{err}"),
@@ -60,14 +62,14 @@ impl Interpreter {
         self.call_stack.last_mut()
     }
     pub fn register(&mut self, register: Register) -> Option<&Rc<RefCell<Value>>> {
-        self.call_frame_mut()
-            .expect("no call frame on stack")
+        self.call_frame_mut()?
             .register(register)
     }
     pub fn call_closure(&mut self, closure: &Rc<Closure>, args: Vec<Value>, dst: Option<Register>) {
         let mut stack = Vec::with_capacity(closure.registers as usize + 1);
+        let args = &args[0..stack.capacity().min(args.len())];
         let args_len = args.len();
-        stack.extend(args.into_iter().map(|v| Rc::new(RefCell::new(v))));
+        stack.extend(args.iter().map(|v| Rc::new(RefCell::new(v.clone()))));
         stack.extend(
             (args_len..=closure.registers as usize).map(|_| Rc::new(RefCell::new(Value::default()))),
         );
@@ -233,7 +235,7 @@ impl Interpreter {
                     .expect("no call frame on stack")
                     .closure
                     .number(addr)
-                    .expect("string not found")
+                    .expect("number not found")
                     .clone();
                 let mut dst = self.register(dst).expect("register not found").borrow_mut();
                 *dst = Value::Number(number);
@@ -244,7 +246,7 @@ impl Interpreter {
                         .expect("no call frame on stack")
                         .closure
                         .closure(addr)
-                        .expect("string not found"),
+                        .expect("closure not found"),
                 );
                 let mut dst = self.register(dst).expect("register not found").borrow_mut();
                 *dst = Value::Function(Rc::new(Function::Function(closure)));
@@ -303,6 +305,7 @@ impl Interpreter {
                         (left, right) => {
                             return Err(Located::new(
                                 RunTimeError::Binary {
+                                    op,
                                     left: left.typ(),
                                     right: right.typ(),
                                 },
@@ -315,6 +318,7 @@ impl Interpreter {
                         (left, right) => {
                             return Err(Located::new(
                                 RunTimeError::Binary {
+                                    op,
                                     left: left.typ(),
                                     right: right.typ(),
                                 },
@@ -327,6 +331,7 @@ impl Interpreter {
                         (left, right) => {
                             return Err(Located::new(
                                 RunTimeError::Binary {
+                                    op,
                                     left: left.typ(),
                                     right: right.typ(),
                                 },
@@ -339,6 +344,7 @@ impl Interpreter {
                         (left, right) => {
                             return Err(Located::new(
                                 RunTimeError::Binary {
+                                    op,
                                     left: left.typ(),
                                     right: right.typ(),
                                 },
@@ -351,6 +357,7 @@ impl Interpreter {
                         (left, right) => {
                             return Err(Located::new(
                                 RunTimeError::Binary {
+                                    op,
                                     left: left.typ(),
                                     right: right.typ(),
                                 },
@@ -363,6 +370,7 @@ impl Interpreter {
                         (left, right) => {
                             return Err(Located::new(
                                 RunTimeError::Binary {
+                                    op,
                                     left: left.typ(),
                                     right: right.typ(),
                                 },
@@ -377,6 +385,7 @@ impl Interpreter {
                         (left, right) => {
                             return Err(Located::new(
                                 RunTimeError::Binary {
+                                    op,
                                     left: left.typ(),
                                     right: right.typ(),
                                 },
@@ -389,6 +398,7 @@ impl Interpreter {
                         (left, right) => {
                             return Err(Located::new(
                                 RunTimeError::Binary {
+                                    op,
                                     left: left.typ(),
                                     right: right.typ(),
                                 },
@@ -401,6 +411,7 @@ impl Interpreter {
                         (left, right) => {
                             return Err(Located::new(
                                 RunTimeError::Binary {
+                                    op,
                                     left: left.typ(),
                                     right: right.typ(),
                                 },
@@ -413,6 +424,7 @@ impl Interpreter {
                         (left, right) => {
                             return Err(Located::new(
                                 RunTimeError::Binary {
+                                    op,
                                     left: left.typ(),
                                     right: right.typ(),
                                 },
@@ -436,7 +448,7 @@ impl Interpreter {
                         Value::Number(v) => Value::Number(-v),
                         right => {
                             return Err(Located::new(
-                                RunTimeError::Unary { right: right.typ() },
+                                RunTimeError::Unary { op, right: right.typ() },
                                 pos,
                             ))
                         }
@@ -452,7 +464,7 @@ impl Interpreter {
         self.call_closure(closure, vec![], None);
         loop {
             let value = self.step()?;
-            if self.call_stack.len() <= offset {
+            if self.call_stack.len() <= offset || self.call_stack.is_empty() {
                 return Ok(value);
             }
         }

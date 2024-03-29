@@ -446,6 +446,16 @@ Statement::Def {
 	Ok(None)
 }
 ```
+1. Erstelle einen neue lokale Variable in den jetzigen Closure
+2. Compiliere die die Parameter und den Body in einem neuen Frame
+	1. Füge einen neuen Frame auf den Frame Stack hinzu
+	2. Iteriere über die Parameter
+		1. Erstelle eine neue lokale Variable in den neuen Closure
+	3. Compiliere den Body
+	4. Schreibe ein leere Return Anweisung in den neuen Closure 
+	5. Nehme den neuen Frame wieder vom Frame Stack runter und speicher eine Referenz zu dem Closure
+	6. Lege eine neue Closure Konstante in dem Closure Konstanten Pool an
+3. Schreibe in den jetzigen Closure eine Closure Anweisung mit der Adresse aus dem 2. Schritt in das Register der Variable aus dem 1. Schritt
 ##### If
 ```rust
 Statement::If {
@@ -480,6 +490,16 @@ Statement::If {
 	Ok(None)
 }
 ```
+1. Compiliere die `cond` Expression und merke dir das Result Register
+2. Schreibe eine leere Anweisung in den jetzigen Closure und merke dir dessen Adresse
+3. Compiliere den `case` Block
+4. Schreibe eine leere Anweisung in den jetzigen Closure und merke dir dessen Adresse
+5. Merke dir die Adresse der nächsten Anweisung
+6. Falls es einen `else_case` gibt
+	1. Compiliere den `else_case` Block
+7. Merke dir die Adresse der Anweisung nach der Letzten
+8. Überschreibe die Anweisung bei der Adresse aus dem 2. Schritt mit einer Jump If Anweisung wo `not` wahr ist, das Konditionsregister das Result Register aus dem 1. Schritt ist, und die Jump Adresse die Adresse aus dem 5. Schritt ist
+9. Überschreibe die Anweisung bei der Adresse aus dem 4. Schritt mit einer Jump Anweisung wo die Jump Adresse die Adresse aus dem 7. Schritt ist
 ##### While
 ```rust
 Statement::While { cond, body } => {
@@ -506,6 +526,13 @@ Statement::While { cond, body } => {
 	Ok(None)
 }
 ```
+1. Merke dir die Adresse der nächsten Anweisung
+2. Compiliere die `cond` Expression und merke dir das Result Register
+3. Schreibe eine leere Anweisung in den jetzigen Closure und merke dir dessen Adresse
+4. Compiliere den `body` Block
+5. Schreibe eine Jump Anweisung in den jetzigen Closure mit der Adresse aus dem 1. Schritt
+7. Merke dir die Adresse der nächsten Anweisung
+8. Überschreibe die Anweisung bei der Adresse aus dem 3. Schritt mit einer Jump If Anweisung wo `not` wahr ist, das Konditionsregister das Result Register aus dem 2. Schritt ist, und die Jump Adresse die Adresse aus dem 7. Schritt ist
 ##### Return
 ```rust
 Statement::Return(expr) => {
@@ -517,6 +544,9 @@ Statement::Return(expr) => {
 	Ok(Some(src))
 }
 ```
+1. Compiliere die Expression und merke dir den Result Register
+2. Schreibe eine Return Anweisung in den jetzigen Closure mit Result Register aus dem 1. Schritt
+3. Gebe das Result Register wieder
 #### Expression
 ```rust
 impl Compilable for Located<Expression> {
