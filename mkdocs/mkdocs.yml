@@ -1,1 +1,10 @@
-site_name: My Docs
+site_name: Compiler
+theme:
+  name: bootstrap
+  highlightjs: true
+  hljs_languages:
+    - rust
+    - python
+    - lua
+    - json
+    - peg

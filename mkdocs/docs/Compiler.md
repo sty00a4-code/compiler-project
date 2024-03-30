@@ -713,3 +713,5 @@ pub fn compile<A: Compilable>(ast: A) -> Result<A::Output, A::Error> {
 }
 ```
 `A` ist hier alles was Compiliert werden kann. Die Funktion ist eigentlich nur eine Übersetzung und benutzen tut man sie eigentlich nur mit dem Chunk AST (z.B. `compile(chunk)` wo `chunk` von Typ `Located<Chunk>` ist), aber ist generell eine gute Abstraktion um die Erwartung des Sprach-Level von Betrachtern zu senken.
+
+Weiter zum [Interpreter](Interpreter.md)

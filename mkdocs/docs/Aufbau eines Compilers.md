@@ -3,4 +3,4 @@ Ein klassischer Compiler kann nicht einfach vom Text zum Byte Code gehen, sonder
 2. __Syntaktische Analyse__: Der Syntax Baum, der darstellt wo was ist.
 3. __Compilierung__: Die tatsächliche Umwandlung in den Byte Code.
 
-Weiter zum [[Lexer]]
+Weiter zum [Lexer](Lexer.md)
