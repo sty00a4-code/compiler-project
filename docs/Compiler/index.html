@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        
+        
+        
+        <link rel="shortcut icon" href="../img/favicon.ico">
+        <title>Compiler - My Docs</title>
+        <link href="../css/bootstrap.min.css" rel="stylesheet">
+        <link href="../css/font-awesome.min.css" rel="stylesheet">
+        <link href="../css/base.css" rel="stylesheet">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css">
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script>hljs.highlightAll();</script> 
+    </head>
+
+    <body>
+        <div class="navbar fixed-top navbar-expand-lg navbar-dark bg-primary">
+            <div class="container">
+                <a class="navbar-brand" href="..">My Docs</a>
+                <!-- Expander button -->
+                <button type="button" class="navbar-toggler" data-toggle="collapse" data-target="#navbar-collapse">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <!-- Expanded navigation -->
+                <div id="navbar-collapse" class="navbar-collapse collapse">
+                        <!-- Main navigation -->
+                        <ul class="nav navbar-nav">
+                            <li class="navitem">
+                                <a href=".." class="nav-link">Home</a>
+                            </li>
+                            <li class="navitem">
+                                <a href="../Aufbau%20eines%20Compilers/" class="nav-link">Aufbau eines Compilers</a>
+                            </li>
+                            <li class="navitem active">
+                                <a href="./" class="nav-link">Compiler</a>
+                            </li>
+                            <li class="navitem">
+                                <a href="../Interpreter/" class="nav-link">Interpreter</a>
+                            </li>
+                            <li class="navitem">
+                                <a href="../Lexer/" class="nav-link">Lexer</a>
+                            </li>
+                            <li class="navitem">
+                                <a href="../Parser/" class="nav-link">Parser</a>
+                            </li>
+                            <li class="navitem">
+                                <a href="../Was%20ist%20ein%20Compiler/" class="nav-link">Was ist ein Compiler</a>
+                            </li>
+                        </ul>
+
+                    <ul class="nav navbar-nav ml-auto">
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" data-toggle="modal" data-target="#mkdocs_search_modal">
+                                <i class="fa fa-search"></i> Search
+                            </a>
+                        </li>
+                            <li class="nav-item">
+                                <a rel="prev" href="../Aufbau%20eines%20Compilers/" class="nav-link">
+                                    <i class="fa fa-arrow-left"></i> Previous
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a rel="next" href="../Interpreter/" class="nav-link">
+                                    Next <i class="fa fa-arrow-right"></i>
+                                </a>
+                            </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            <div class="row">
+                    <div class="col-md-3"><div class="navbar-light navbar-expand-md bs-sidebar hidden-print affix" role="complementary">
+    <div class="navbar-header">
+        <button type="button" class="navbar-toggler collapsed" data-toggle="collapse" data-target="#toc-collapse" title="Table of Contents">
+            <span class="fa fa-angle-down"></span>
+        </button>
+    </div>
+
+    
+    <div id="toc-collapse" class="navbar-collapse collapse card bg-secondary">
+        <ul class="nav flex-column">
+            
+            <li class="nav-item" data-level="2"><a href="#closure" class="nav-link">Closure</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            
+            <li class="nav-item" data-level="2"><a href="#byte-code" class="nav-link">Byte Code</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            
+            <li class="nav-item" data-level="2"><a href="#compiler" class="nav-link">Compiler</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+        </ul>
+    </div>
+</div></div>
+                    <div class="col-md-9" role="main">
+
+<p>Wie ich schon in dem Abschnitt "<a href="docs/Was%20ist%20ein%20Compiler">Was ist ein Compiler</a>" erklärt habe, muss der AST jetzt nur noch in einen Byte Code umgewandelt werden.</p>
+<h2 id="closure">Closure</h2>
+<p>Ein Closure ist ein eigene Code Instanz die den Byte Code speichert, sowie die Anzahl an benötigten Registern und Konstanten. Die folgende Struktur ist ein Closure in meinem Compiler</p>
+<pre><code class="language-rust">struct Closure {
+    code: Vec&lt;Located&lt;ByteCode&gt;&gt;,
+    registers: u16,
+    strings: Vec&lt;String&gt;,
+    numbers: Vec&lt;f64&gt;,
+    closures: Vec&lt;Rc&lt;Self&gt;&gt;,
+}
+</code></pre>
+<p>Hier wird ein Array von Byte Codes gespeichert, die Register Anzahl und Konstanten, also Zahlen, Strings, und Referenzen zu anderen Closures die in diesem Teil des Source Codes entstehen können. Closures werden vom Interpreter Aufgerufen in einem Call Stack</p>
+<h2 id="byte-code">Byte Code</h2>
+<h3 id="im-interpreter">Im Interpreter</h3>
+<p>Da Compiler und Interpreter funktional sehr abhängig von einander sind, muss ich vorher ein paar Sachen klar stellen, wie der Interpreter den Byte Code tatsächlich ausführt.
+Der Interpreter den ich schreiben werde, hat einen sogenannten Call Stack, der dafür zuständig ist sich zu merken, welche Closure gerade ausgeführt wird. In dem Call Stack werden Call Frames gespeichert, die wie folgt strukturiert sind:</p>
+<pre><code class="language-rust">struct CallFrame {
+    closure: Rc&lt;Closure&gt;,
+    ip: Address,
+    stack: Vec&lt;Rc&lt;RefCell&lt;Value&gt;&gt;&gt;,
+    dst: Option&lt;Register&gt;,
+}
+</code></pre>
+<p>Dieser hat eine Referenz zu dem Closure der gerade Ausgeführt wird, einen Instruction Pointer der sagt wo im Code der Interpreter sich gerade befindet, einen Stack auf dem Werte gespeichert werden, um mit diesen Operationen auszuführen, und einen Wiedergabe Register des Stacks des Call Frames vor diesem Call Frame.</p>
+<h3 id="register">Register</h3>
+<p>In meinem Compiler benutze ich so genannte Register um Werte zu speichern und daran Operationen durchzuführen später beim Interpreter. Um diese Register anzusprechen muss man sie natürlich identifizieren können mit Hilfe eines Indexes. Dieser Index kann von 0 bis hoch zu einer beliebigen Größe gehen. </p>
+<pre><code class="language-rust">type Register = u16;
+</code></pre>
+<p>Hier definiere ich Typen Aliase, was bedeutet, wenn ich jetzt <code>Register</code> schreibe, ersetzt Rust das mit <code>u16</code> (16 Bit unsigned integer).</p>
+<h3 id="adressen">Adressen</h3>
+<p>Was auch später wichtig für den Interpreter wird ist, wie er zu einer beliebigen Anweisung springen kann.  </p>
+<pre><code class="language-rust">type Address = u32;
+</code></pre>
+<p>In meinem Interpreter werden die Positionen der Anweisungen mit einem <code>u32</code> (32 Bit unsigned integer) angesprochen.</p>
+<h3 id="anweisungen">Anweisungen</h3>
+<p>Jetzt komme ich zu den tatsächlichen Byte Code den ich für diese Sprache geschrieben habe:</p>
+<pre><code class="language-rust">enum ByteCode {
+    #[default]
+    None,
+
+    Jump {
+        addr: Address,
+    },
+    JumpIf {
+        not: bool,
+        cond: Register,
+        addr: Address,
+    },
+
+    Call {
+        func: Register,
+        offset: Register,
+        args_len: u8,
+        dst: Option&lt;Register&gt;,
+    },
+    Return {
+        src: Option&lt;Register&gt;,
+    },
+
+    Move {
+        dst: Register,
+        src: Register,
+    },
+    String {
+        dst: Register,
+        addr: Address,
+    },
+    Number {
+        dst: Register,
+        addr: Address,
+    },
+    Closure {
+        dst: Register,
+        addr: Address,
+    },
+    Global {
+        dst: Register,
+        addr: Address,
+    },
+    SetGlobal {
+        addr: Address,
+        src: Register
+    },
+
+    Binary {
+        op: BinaryOperation,
+        dst: Register,
+        left: Register,
+        right: Register,
+    },
+    Unary {
+        op: UnaryOperation,
+        dst: Register,
+        src: Register,
+    },
+}
+enum BinaryOperation {
+    Add,
+    Sub,
+    Mul,
+    Div,
+    Mod,
+    Pow,
+    EQ,
+    NE,
+    LT,
+    GT,
+    LE,
+    GE,
+    And,
+    Or,
+}
+enum UnaryOperation {
+    Neg,
+    Not,
+}
+</code></pre>
+<p>Das sind alle nötigen Anweisungen für meine Sprache.</p>
+<h4 id="jump">Jump</h4>
+<pre><code class="language-rust">Jump {
+    addr: Address,
+}
+</code></pre>
+<p>Sagt dem Interpreter, dass er zu einer bestimmten Adresse springen soll.</p>
+<h4 id="jump-if">Jump If</h4>
+<pre><code class="language-rust">JumpIf {
+    not: bool,
+    cond: Register,
+    addr: Address,
+}
+</code></pre>
+<p>Sagt dem Interpreter, dass er zu einer bestimmten Adresse springen soll, falls der Wert in dem Register <code>cond</code> wahr ist. Dieser Boolesche Wert kann mit dem <code>not = true</code> verneint werden.</p>
+<h4 id="call">Call</h4>
+<pre><code class="language-rust">Call {
+    func: Register,
+    offset: Register,
+    args_len: u8,
+    dst: Option&lt;Register&gt;,
+},
+</code></pre>
+<p>Ruft die Funktion in Register <code>func</code> auf (wenn der Wert überhaupt eine Funktion ist) und gibt optional den Wiedergabewert der Funktion in ein bestimmtes Register zurück. Die Argumente für diesen Call werden mit <code>offset</code>, wo die Argumente im Stack anfangen, und <code>args_len</code>, wie viele Argumente eingenommen werde, angegeben.</p>
+<h4 id="return">Return</h4>
+<pre><code class="language-rust">Return {
+    src: Option&lt;Register&gt;,
+},
+</code></pre>
+<p>Geht aus dem jetzigen Call raus mit einen Optionalen Wiedergabewert.</p>
+<h4 id="move">Move</h4>
+<pre><code class="language-rust">Move {
+    dst: Register,
+    src: Register,
+},
+</code></pre>
+<p>Kopiert den Wert von Register <code>src</code> zu <code>dst</code>.</p>
+<h4 id="string-number-und-closure">String, Number und Closure</h4>
+<pre><code class="language-rust">String {
+    dst: Register,
+    addr: Address, // address to string pool
+},
+Number {
+    dst: Register,
+    addr: Address, // address to number pool
+},
+Closure {
+    dst: Register,
+    addr: Address, // address to closure reference pool
+},
+</code></pre>
+<p>Alle drei Anweisungen sagen dem Interpreter er soll eine Konstante aus dem Konstanten Pool in das <code>dst</code> Register kopieren. Diese Konstanten sind jeweils Zahlen (<code>f64</code>), Strings und Closures. Diese Werden jeweils in jedem Closure gespeichert.</p>
+<h4 id="global">Global</h4>
+<pre><code class="language-rust">Global {
+    dst: Register,
+    addr: Address,
+},
+</code></pre>
+<p>Diese Anweisung funktioniert fast wie die für die Konstanten, dennoch wird hier nicht aus dem Konstanten Pool genommen, sondern aus der Globalen Umgebung. Dafür wird ein String aus den Strings des Closures kopiert und dann wird dieser String als Identifier in der Globalen Umgebung gesucht. Wenn kein passender Schlüssel gefunden wird, wird <code>null</code> in das Register stattdessen geladen.</p>
+<h4 id="set-global">Set Global</h4>
+<pre><code class="language-rust">SetGlobal {
+    addr: Address,
+    src: Register
+},
+</code></pre>
+<p>Setzt den Wert des Schlüssels (aus dem String Pool) der Globalen Umgebung auf den Wert in dem <code>src</code> Registers.</p>
+<h4 id="binary-und-unary">Binary und Unary</h4>
+<pre><code class="language-rust">Binary {
+    op: BinaryOperation,
+    dst: Register,
+    left: Register,
+    right: Register,
+},
+Unary {
+    op: UnaryOperation,
+    dst: Register,
+    src: Register,
+},
+</code></pre>
+<p>Diese Anweisungen führen jeweils ihre Operationen auf den Registern <code>left</code> und <code>right</code>, bzw. für Unary nur <code>right</code>, und setzt den resultierenden Wert in das Register <code>dst</code>. 
+Hier nochmal die Operationen:</p>
+<pre><code class="language-rust">enum BinaryOperation {
+    Add, // left + right
+    Sub, // left - right
+    Mul, // left * right
+    Div, // left / right
+    Mod, // left % right
+    Pow, // left ^ right
+    EQ, // left == right
+    NE, // left != right
+    LT, // left &lt; right
+    GT, // left &gt; right
+    LE, // left &lt;= right
+    GE, // left &gt;= right
+    And, // left &amp; right
+    Or, // left | right
+}
+enum UnaryOperation {
+    Neg, // -right
+    Not, // !right
+}
+</code></pre>
+<h2 id="compiler">Compiler</h2>
+<p>Jetzt kommen wir zum tatsächlichen Compilierungsvorgang. Der Compiler den ich schreibe basiert auf einem Frame und Scope Prinzip.</p>
+<pre><code class="language-rust">struct Compiler {
+    frames: Vec&lt;Frame&gt;, // frame stack
+}
+struct Frame {
+    closure: Closure, // editable closure
+    registers: Register, // currently used registers
+    scopes: Vec&lt;Scope&gt;, // scope stack
+}
+struct Scope {
+    locals: HashMap&lt;String, Register&gt;, // table of variable register pairs
+    offset: Register, // register stack offset
+}
+</code></pre>
+<p>Der Compiler hat einen Frame Stack und compiliert immer nur den letzen Frame. Jeder Frame hat einen veränderbaren Closure, die Anzahl an momentan benutzen Registern und ein Scope Stack. Jeder Scope hat eine Tabelle wo Variablen und ihre Register Indexes gespeichert werden, sowie den Register Stack Offset, der angibt an Welchem Register Index der Scope anfängt.</p>
+<h3 id="implementierung">Implementierung</h3>
+<pre><code class="language-rust">trait Compilable {
+    type Output;
+    type Error;
+    fn compile(self, compiler: &amp;mut Compiler) -&gt; Result&lt;Self::Output, Self::Error&gt;;
+}
+</code></pre>
+<p>Hier definiere ich einen Trait der den Implementierer zum Compilieren wichtige Informationen sowie Funktionen implementieren lässt.</p>
+<h4 id="chunk">Chunk</h4>
+<pre><code class="language-rust">impl Compilable for Located&lt;Chunk&gt; {
+    type Output = Closure;
+    type Error = Located&lt;CompileError&gt;;
+    fn compile(self, compiler: &amp;mut Compiler) -&gt; Result&lt;Self::Output, Self::Error&gt; {
+        compiler.push_frame(); // new frame
+        for stat in self.value.0 {
+            stat.compile(compiler)?; // compile every statement
+        }
+        compiler.frame_mut().closure.write(ByteCode::Return { src: None }, self.pos); // mendatory null return
+        let frame = compiler.pop_frame().unwrap(); // pop frame
+        Ok(frame.closure)
+    }
+}
+</code></pre>
+<p>Das hier ist die Implementierung für den Chunk AST. Dieser gibt ein Closure wieder oder als Error einen Compile Error, der momentan noch leer ist.
+Der Code in Schritten erklärt:
+1. Werfe ein neuen Frame auf den Frame Stack
+2. Iteriere über jedes Statement und compiliere es
+3. Schreibe eine Return Anweisung am Ende in das Closure
+4. Nimm den Frame den du beim 1. Schritt erstellt hast vom Stack
+5. Gib den Closure des Frames wieder</p>
+<h4 id="block">Block</h4>
+<p>Für den Block AST ist die Implementierung ähnlich zu der des Chunk AST, nur dass kein neues Frame auf den Frame Stack geworfen wird sonder ein neuer Scope auf den Scope Stack.</p>
+<h4 id="statement">Statement</h4>
+<pre><code class="language-rust">impl Compilable for Located&lt;Statement&gt; {
+    type Output = Option&lt;Register&gt;;
+    type Error = Located&lt;CompileError&gt;;
+    fn compile(self, compiler: &amp;mut Compiler) -&gt; Result&lt;Self::Output, Self::Error&gt; {
+        let Located { value: stat, pos } = self;
+        match stat {
+            ...
+        }
+    }
+}
+</code></pre>
+<p>Beim Statement habe ich mehrere Varianten die ich alle verschieden compilieren muss. Der Output ist hier ein Optionales Register, denn das Statement kann ein Return Statement sein welche ein den Wert eines Registers wiedergeben kann.</p>
+<h5 id="block_1">Block</h5>
+<pre><code class="language-rust">Statement::Block(block) =&gt; Located::new(block, pos).compile(compiler)
+</code></pre>
+<p>Compiliere einfach den Block</p>
+<h5 id="let">Let</h5>
+<pre><code class="language-rust">Statement::Let {
+    ident:
+        Located {
+            value: ident,
+            pos: _,
+        },
+    expr,
+} =&gt; {
+    let reg = compiler.frame_mut().new_local(ident);
+    let src = expr.compile(compiler)?;
+    compiler
+        .frame_mut()
+        .closure
+        .write(ByteCode::Move { dst: reg, src }, pos);
+    Ok(None)
+}
+</code></pre>
+<ol>
+<li>Erstelle einen neue lokale Variable</li>
+<li>Compiliere die Expression</li>
+<li>Schreibe in den jetzigen Closure eine Move Anweisung von dem Result Register  der Expression aus dem 2. Schritt zum Register der Variable aus dem 1. Schritt</li>
+</ol>
+<h5 id="assign">Assign</h5>
+<pre><code class="language-rust">Statement::Assign {
+    ident:
+        Located {
+            value: ident,
+            pos: ident_pos,
+        },
+    expr,
+} =&gt; {
+    let reg = compiler.frame_mut().local(&amp;ident);
+    let src = expr.compile(compiler)?;
+    if let Some(reg) = reg {
+        compiler
+            .frame_mut()
+            .closure
+            .write(ByteCode::Move { dst: reg, src }, pos);
+    } else {
+        let addr = compiler.frame_mut().closure.new_string(ident);
+        compiler
+            .frame_mut()
+            .closure
+            .write(ByteCode::SetGlobal { addr, src }, pos);
+    }
+    Ok(None)
+}
+</code></pre>
+<ol>
+<li>Finde das Register der lokalen Variable (falls es diese gibt)</li>
+<li>Compiliere die Expression</li>
+<li>Wenn du das Register aus dem 1. Schritt gefunden hast<ol>
+<li>Schreibe in den jetzigen Closure eine Move Anweisung von dem Result Register  der Expression aus dem 2. Schritt zum Register der Variable aus dem 1. Schritt</li>
+</ol>
+</li>
+<li>Falls du das Register aus dem 1. Schritt nicht gefunden hast<ol>
+<li>Lege eine neue String Konstante diese Identifiers an</li>
+<li>Schreibe in den jetzigen Closure eine Set Global Anweisung mit dem Result Register der Expression aus dem 2. Schritt und der Adresse der String Konstante aus dem 4.1. Schritt</li>
+</ol>
+</li>
+</ol>
+<h5 id="call_1">Call</h5>
+<pre><code class="language-rust">Statement::Call {
+    ident:
+        Located {
+            value: ident,
+            pos: ident_pos,
+        },
+    args,
+} =&gt; {
+    let func = if let Some(reg) = compiler.frame_mut().local(&amp;ident) {
+        reg
+    } else {
+        let addr = compiler.frame_mut().closure.new_string(ident);
+        let dst = compiler.frame_mut().new_register();
+        compiler
+            .frame_mut()
+            .closure
+            .write(ByteCode::Global { dst, addr }, ident_pos);
+        dst
+    };
+    let args_len = args.len() as u8;
+    let offset = compiler.frame().registers;
+    compiler.frame_mut().registers += args_len as Register;
+    for (reg, arg) in (offset..offset + args_len as Register).zip(args) {
+        let pos = arg.pos.clone();
+        let src = arg.compile(compiler)?;
+        compiler
+            .frame_mut()
+            .closure
+            .write(ByteCode::Move { dst: reg, src }, pos);
+    }
+    compiler.frame_mut().closure.write(
+        ByteCode::Call {
+            func,
+            offset,
+            args_len,
+            dst: None,
+        },
+        pos,
+    );
+    Ok(None)
+}
+</code></pre>
+<ol>
+<li>Finde das Register der Funktion</li>
+<li>Merke dir das Offset als die jetzige Register Anzahl</li>
+<li>Addiere die Anzahl an Argumenten auf die Register Anzahl drauf</li>
+<li>Iteriere über jedes Argument<ol>
+<li>Compiliere das Argument und speicher das Result Register</li>
+<li>Schreibe in den jetzigen Closure eine Move Anweisung von dem Result Register aus dem 4.1 Schritt zu dem entsprechenden Argument Register</li>
+</ol>
+</li>
+<li>Schreibe in den jetzigen Closure eine Call Anweisung mit dem Register der Funktion aus dem 1. Schritt, das Offset aus dem 2. Schritt, die Argumenten Länge, und mit einem leeren Result Register.</li>
+</ol>
+<h5 id="def">Def</h5>
+<pre><code class="language-rust">Statement::Def {
+    ident:
+        Located {
+            value: ident,
+            pos: _,
+        },
+    params,
+    body,
+} =&gt; {
+    let reg = compiler.frame_mut().new_local(ident);
+    let addr = {
+        compiler.push_frame();
+        for Located {
+            value: param,
+            pos: _,
+        } in params
+        {
+            compiler.frame_mut().new_local(param);
+        }
+        body.compile(compiler)?;
+        compiler
+            .frame_mut()
+            .closure
+            .write(ByteCode::Return { src: None }, pos.clone());
+        let frame = compiler.pop_frame().unwrap();
+        let closure = Rc::new(frame.closure);
+        compiler.frame_mut().closure.new_closure(closure)
+    };
+    compiler
+        .frame_mut()
+        .closure
+        .write(ByteCode::Closure { dst: reg, addr }, pos);
+    Ok(None)
+}
+</code></pre>
+<ol>
+<li>Erstelle einen neue lokale Variable in den jetzigen Closure</li>
+<li>Compiliere die die Parameter und den Body in einem neuen Frame<ol>
+<li>Füge einen neuen Frame auf den Frame Stack hinzu</li>
+<li>Iteriere über die Parameter<ol>
+<li>Erstelle eine neue lokale Variable in den neuen Closure</li>
+</ol>
+</li>
+<li>Compiliere den Body</li>
+<li>Schreibe ein leere Return Anweisung in den neuen Closure </li>
+<li>Nehme den neuen Frame wieder vom Frame Stack runter und speicher eine Referenz zu dem Closure</li>
+<li>Lege eine neue Closure Konstante in dem Closure Konstanten Pool an</li>
+</ol>
+</li>
+<li>Schreibe in den jetzigen Closure eine Closure Anweisung mit der Adresse aus dem 2. Schritt in das Register der Variable aus dem 1. Schritt</li>
+</ol>
+<h5 id="if">If</h5>
+<pre><code class="language-rust">Statement::If {
+    cond,
+    case,
+    else_case,
+} =&gt; {
+    let cond = cond.compile(compiler)?;
+    let check_addr = compiler
+        .frame_mut()
+        .closure
+        .write(ByteCode::default(), pos.clone());
+    case.compile(compiler)?;
+    let case_exit_addr = compiler.frame_mut().closure.write(ByteCode::default(), pos);
+    let else_addr = compiler.frame_mut().closure.code.len() as Address;
+    if let Some(else_case) = else_case {
+        else_case.compile(compiler)?;
+    }
+    let exit_addr = compiler.frame_mut().closure.code.len() as Address;
+    compiler.frame_mut().closure.overwrite(
+        check_addr,
+        ByteCode::JumpIf {
+            not: true,
+            cond,
+            addr: else_addr,
+        },
+    );
+    compiler
+        .frame_mut()
+        .closure
+        .overwrite(case_exit_addr, ByteCode::Jump { addr: exit_addr });
+    Ok(None)
+}
+</code></pre>
+<ol>
+<li>Compiliere die <code>cond</code> Expression und merke dir das Result Register</li>
+<li>Schreibe eine leere Anweisung in den jetzigen Closure und merke dir dessen Adresse</li>
+<li>Compiliere den <code>case</code> Block</li>
+<li>Schreibe eine leere Anweisung in den jetzigen Closure und merke dir dessen Adresse</li>
+<li>Merke dir die Adresse der nächsten Anweisung</li>
+<li>Falls es einen <code>else_case</code> gibt<ol>
+<li>Compiliere den <code>else_case</code> Block</li>
+</ol>
+</li>
+<li>Merke dir die Adresse der Anweisung nach der Letzten</li>
+<li>Überschreibe die Anweisung bei der Adresse aus dem 2. Schritt mit einer Jump If Anweisung wo <code>not</code> wahr ist, das Konditionsregister das Result Register aus dem 1. Schritt ist, und die Jump Adresse die Adresse aus dem 5. Schritt ist</li>
+<li>Überschreibe die Anweisung bei der Adresse aus dem 4. Schritt mit einer Jump Anweisung wo die Jump Adresse die Adresse aus dem 7. Schritt ist</li>
+</ol>
+<h5 id="while">While</h5>
+<pre><code class="language-rust">Statement::While { cond, body } =&gt; {
+    let cond_addr = compiler.frame_mut().closure.code.len() as Address;
+    let cond = cond.compile(compiler)?;
+    let check_addr = compiler
+        .frame_mut()
+        .closure
+        .write(ByteCode::default(), pos.clone());
+    body.compile(compiler)?;
+    compiler
+        .frame_mut()
+        .closure
+        .write(ByteCode::Jump { addr: cond_addr }, pos);
+    let exit_addr = compiler.frame_mut().closure.code.len() as Address;
+    compiler.frame_mut().closure.overwrite(
+        check_addr,
+        ByteCode::JumpIf {
+            not: true,
+            cond,
+            addr: exit_addr,
+        },
+    );
+    Ok(None)
+}
+</code></pre>
+<ol>
+<li>Merke dir die Adresse der nächsten Anweisung</li>
+<li>Compiliere die <code>cond</code> Expression und merke dir das Result Register</li>
+<li>Schreibe eine leere Anweisung in den jetzigen Closure und merke dir dessen Adresse</li>
+<li>Compiliere den <code>body</code> Block</li>
+<li>Schreibe eine Jump Anweisung in den jetzigen Closure mit der Adresse aus dem 1. Schritt</li>
+<li>Merke dir die Adresse der nächsten Anweisung</li>
+<li>Überschreibe die Anweisung bei der Adresse aus dem 3. Schritt mit einer Jump If Anweisung wo <code>not</code> wahr ist, das Konditionsregister das Result Register aus dem 2. Schritt ist, und die Jump Adresse die Adresse aus dem 7. Schritt ist</li>
+</ol>
+<h5 id="return_1">Return</h5>
+<pre><code class="language-rust">Statement::Return(expr) =&gt; {
+    let src = expr.compile(compiler)?;
+    compiler
+        .frame_mut()
+        .closure
+        .write(ByteCode::Return { src: Some(src) }, pos);
+    Ok(Some(src))
+}
+</code></pre>
+<ol>
+<li>Compiliere die Expression und merke dir den Result Register</li>
+<li>Schreibe eine Return Anweisung in den jetzigen Closure mit Result Register aus dem 1. Schritt</li>
+<li>Gebe das Result Register wieder</li>
+</ol>
+<h4 id="expression">Expression</h4>
+<pre><code class="language-rust">impl Compilable for Located&lt;Expression&gt; {
+    type Output = Register;
+    type Error = Located&lt;CompileError&gt;;
+    fn compile(self, compiler: &amp;mut Compiler) -&gt; Result&lt;Self::Output, Self::Error&gt; {
+        let Located { value: expr, pos } = self;
+        match expr {
+            ...
+        }
+    }
+}
+</code></pre>
+<p>Bei der Expression muss immer ein Register wiedergegeben werden.</p>
+<h5 id="atom">Atom</h5>
+<pre><code class="language-rust">Expression::Atom(atom) =&gt; Located::new(atom, pos).compile(compiler),
+</code></pre>
+<p>Einfache Compilierung von dem innerem Atom</p>
+<h5 id="binary">Binary</h5>
+<pre><code class="language-rust">Expression::Binary { op, left, right } =&gt; {
+    let dst = compiler.frame_mut().new_register();
+    let left = left.compile(compiler)?;
+    let right = right.compile(compiler)?;
+    let op = op.into();
+    compiler.frame_mut().closure.write(
+        ByteCode::Binary {
+            op,
+            dst,
+            left,
+            right,
+        },
+        pos,
+    );
+    Ok(dst)
+}
+</code></pre>
+<ol>
+<li>Erstelle ein neues Result Register für die Operation</li>
+<li>Compiliere die linke Seite</li>
+<li>Compiliere die rechte Seite</li>
+<li>Wandele den Binary Operator in seine entsprechende Binary Operation um</li>
+<li>Schreibe die Binary Anweisung in den jetzigen Closure</li>
+<li>Gebe das Result Register aus dem 1. Schritt wieder</li>
+</ol>
+<h5 id="unary">Unary</h5>
+<pre><code class="language-rust">let dst = compiler.frame_mut().new_register();
+let src = right.compile(compiler)?;
+let op = op.into();
+compiler
+    .frame_mut()
+    .closure
+    .write(ByteCode::Unary { op, dst, src }, pos);
+Ok(dst)
+</code></pre>
+<ol>
+<li>Erstelle ein neues Result Register für die Operation</li>
+<li>Compiliere die rechte Seite</li>
+<li>Wandele den Unary Operator in seine entsprechende Unary Operation um</li>
+<li>Schreibe die Unary Anweisung in den jetzigen Closure</li>
+<li>Gebe das Result Register aus dem 1. Schritt wieder</li>
+</ol>
+<h5 id="call_2">Call</h5>
+<pre><code class="language-rust">Expression::Call { head, args } =&gt; {
+    let dst = compiler.frame_mut().new_register();
+    let func = head.compile(compiler)?;
+    let args_len = args.len() as u8;
+    let offset = compiler.frame().registers;
+    compiler.frame_mut().registers += args_len as Register;
+    for (reg, arg) in (offset..offset + args_len as Register).zip(args) {
+        let pos = arg.pos.clone();
+        let src = arg.compile(compiler)?;
+        compiler
+            .frame_mut()
+            .closure
+            .write(ByteCode::Move { dst: reg, src }, pos);
+    }
+    compiler.frame_mut().closure.write(
+        ByteCode::Call {
+            func,
+            offset,
+            args_len,
+            dst: Some(dst),
+        },
+        pos,
+    );
+    Ok(dst)
+}
+</code></pre>
+<ol>
+<li>Compiliere die aufzurufende Funktion und merke dir dessen Result Register</li>
+<li>Merke dir das Offset als die jetzige Register Anzahl</li>
+<li>Addiere die Anzahl an Argumenten auf die Register Anzahl drauf</li>
+<li>Iteriere über jedes Argument<ol>
+<li>Compiliere das Argument und speicher das Result Register</li>
+<li>Schreibe in den jetzigen Closure eine Move Anweisung von dem Result Register aus dem 4.1 Schritt zu dem entsprechenden Argument Register</li>
+</ol>
+</li>
+<li>Schreibe in den jetzigen Closure eine Call Anweisung mit dem Register der Funktion aus dem 1. Schritt, das Offset aus dem 2. Schritt, die Argumenten Länge, und mit einem leeren Result Register.</li>
+</ol>
+<h4 id="atom_1">Atom</h4>
+<pre><code class="language-rust">impl Compilable for Located&lt;Atom&gt; {
+    type Output = Register;
+    type Error = Located&lt;CompileError&gt;;
+    fn compile(self, compiler: &amp;mut Compiler) -&gt; Result&lt;Self::Output, Self::Error&gt; {
+        let Located { value: atom, pos } = self;
+        match atom {
+            ...
+        }
+    }
+}
+</code></pre>
+<p>Bei dem Atom muss immer ein Register wiedergegeben werden.</p>
+<h5 id="expression_1">Expression</h5>
+<pre><code class="language-rust">Atom::Expression(expr) =&gt; expr.compile(compiler),
+</code></pre>
+<p>Compiliere einfach die Expression</p>
+<h5 id="ident">Ident</h5>
+<pre><code class="language-rust">Atom::Ident(ident) =&gt; Ok(if let Some(reg) = compiler.frame_mut().local(&amp;ident) {
+    reg
+} else {
+    let addr = compiler.frame_mut().closure.new_string(ident);
+    let dst = compiler.frame_mut().new_register();
+    compiler
+        .frame_mut()
+        .closure
+        .write(ByteCode::Global { dst, addr }, pos);
+    dst
+}),
+</code></pre>
+<ol>
+<li>Versuche das Register der Variable zu finden</li>
+<li>Wenn du es gefunden hast: Gebe das Register einfach wieder</li>
+<li>Wenn du es nicht gefunden hast<ol>
+<li>Lege eine neue String Konstante diese Identifiers an</li>
+<li>Erstelle ein neues Register</li>
+<li>Schreibe die Global Anweisung in den jetzigen Closure mit der String Adresse aus dem 2.1 Schritt und dem Register aus dem 2.2 Schritt</li>
+</ol>
+</li>
+</ol>
+<h5 id="number-und-string">Number und String</h5>
+<pre><code class="language-rust">Atom::Number(number) =&gt; {
+    let addr = compiler.frame_mut().closure.new_number(number);
+    let dst = compiler.frame_mut().new_register();
+    compiler
+        .frame_mut()
+        .closure
+        .write(ByteCode::Number { dst, addr }, pos);
+    Ok(dst)
+}
+Atom::String(string) =&gt; {
+    let addr = compiler.frame_mut().closure.new_string(string);
+    let dst = compiler.frame_mut().new_register();
+    compiler
+        .frame_mut()
+        .closure
+        .write(ByteCode::String { dst, addr }, pos);
+    Ok(dst)
+}
+</code></pre>
+<ol>
+<li>Lege eine neue Konstante an</li>
+<li>Erstelle ein neues Register</li>
+<li>Schreibe eine Number/String Anweisung in den jetzigen Closure mit der Konstanten Adresse aus dem 1. Schritt und dem Register aus dem 2. Schritt</li>
+</ol>
+<h3 id="in-einer-funktion">In einer Funktion</h3>
+<p>Das ganze packe ich noch in eine generische Funktion.</p>
+<pre><code class="language-rust">pub fn compile&lt;A: Compilable&gt;(ast: A) -&gt; Result&lt;A::Output, A::Error&gt; {
+    ast.compile(&amp;mut Compiler::default())
+}
+</code></pre>
+<p><code>A</code> ist hier alles was Compiliert werden kann. Die Funktion ist eigentlich nur eine Übersetzung und benutzen tut man sie eigentlich nur mit dem Chunk AST (z.B. <code>compile(chunk)</code> wo <code>chunk</code> von Typ <code>Located&lt;Chunk&gt;</code> ist), aber ist generell eine gute Abstraktion um die Erwartung des Sprach-Level von Betrachtern zu senken.</p></div>
+            </div>
+        </div>
+
+        <footer class="col-md-12">
+            <hr>
+            <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
+        </footer>
+        <script src="../js/jquery-3.6.0.min.js"></script>
+        <script src="../js/bootstrap.min.js"></script>
+        <script>
+            var base_url = "..",
+                shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
+        </script>
+        <script src="../js/base.js"></script>
+        <script src="../search/main.js"></script>
+
+        <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="searchModalLabel">Search</h4>
+                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+            </div>
+            <div class="modal-body">
+                <p>From here you can search these documents. Enter your search terms below.</p>
+                <form>
+                    <div class="form-group">
+                        <input type="search" class="form-control" placeholder="Search..." id="mkdocs-search-query" title="Type search term here">
+                    </div>
+                </form>
+                <div id="mkdocs-search-results" data-no-results-text="No results found"></div>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div><div class="modal" id="mkdocs_keyboard_modal" tabindex="-1" role="dialog" aria-labelledby="keyboardModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="keyboardModalLabel">Keyboard Shortcuts</h4>
+                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+            </div>
+            <div class="modal-body">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th style="width: 20%;">Keys</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="help shortcut"><kbd>?</kbd></td>
+                    <td>Open this help</td>
+                  </tr>
+                  <tr>
+                    <td class="next shortcut"><kbd>n</kbd></td>
+                    <td>Next page</td>
+                  </tr>
+                  <tr>
+                    <td class="prev shortcut"><kbd>p</kbd></td>
+                    <td>Previous page</td>
+                  </tr>
+                  <tr>
+                    <td class="search shortcut"><kbd>s</kbd></td>
+                    <td>Search</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+
+    </body>
+</html>
