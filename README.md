@@ -8,4 +8,4 @@ In diesem Projekt werde ich Schritt für Schritt erklären wie man einen Compile
 3. [Interpreter](docs/Interpreter.md)
 4. [Meine Eigene Sprache: Luna](https://github.com/sty00a4-code/luna)
 # Fazit
-Generell ist mir die der Compiler gut gelungen, auch wenn er nicht viel kann. Die meisten Konzepte die ich hier benutzt habe sind von einer meiner besten Programmiersprachen [Luna](https://github.com/sty00a4-code/luna), die ich während dem Informatik Unterricht meistens gemacht habe.
+Generell ist mir die der Compiler gut gelungen, auch wenn er nicht viel kann. Die meisten Konzepte die ich hier benutzt habe sind von einer meiner besten Programmiersprachen [Luna](https://github.com/sty00a4-code/luna), die ich während dem Informatik Unterricht meistens programmiert habe.
