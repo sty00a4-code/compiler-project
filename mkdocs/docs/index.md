@@ -1,3 +1,5 @@
+*Projekt von Vincent Reuter für BBS1 Mainz, Am Judensand, LK IV*
+
 In diesem Projekt werde ich Schritt für Schritt erklären wie man einen Compiler erstellt und gleichzeitig das Erklärte in Rust implementieren. Auch habe ich die hier benutzten Konzept vorher in meiner eigenen Programmiersprache "Luna" ausprobiert und stark erweitert. __Das Repository ist auch Teil des Projekts!__
 # Inhaltsverzeichnis
 1. [Was ist ein Compiler?](Was%20ist%20ein%20Compiler.md)
